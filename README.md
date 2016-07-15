@@ -56,10 +56,8 @@ we are tracing raw sockets. This application needs to be run as root.
 
     Finished capturing 42 packets.
 
-    > wireshark nsntrace.pcap
-    
     > tshark -r nsntrace.pcap -Y 'http.response or http.request'
-     16   0.998839 172.16.42.255 -> 10.0.2.60    HTTP 229 GET http://www.google.com/ HTTP/1.1 
-     20   1.010671    10.0.2.60 -> 172.16.42.255 HTTP 324 HTTP/1.1 302 Moved Temporarily  (text/html)
-     22   1.010898 172.16.42.255 -> 10.0.2.60    HTTP 263 GET http://www.google.se/?gfe_rd=cr&ei=AbeIV5zZHcaq8wfTlrjgCA HTTP/1.1 
-     31   1.051006    10.0.2.60 -> 172.16.42.255 HTTP 71 HTTP/1.1 200 OK  (text/html)
+    16   0.998839 172.16.42.255 -> 195.249.146.104    HTTP 229 GET http://www.google.com/ HTTP/1.1
+    20   1.010671    195.249.146.104 -> 172.16.42.255 HTTP 324 HTTP/1.1 302 Moved Temporarily  (text/html)
+    22   1.010898 172.16.42.255 -> 195.249.146.104    HTTP 263 GET http://www.google.se/?gfe_rd=cr&ei=AbeIV5zZHcaq8wfTlrjgCA HTTP/1.1
+    31   1.051006    195.249.146.104 -> 172.16.42.255 HTTP 71 HTTP/1.1 200 OK  (text/html)
