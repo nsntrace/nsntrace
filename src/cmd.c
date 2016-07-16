@@ -15,6 +15,7 @@
  */
 
 #include <stdarg.h>
+#include <stdio.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -69,6 +70,6 @@ nsntrace_cmd_run(char *format, ...)
 		va_start(arg, format);
 		vsnprintf(cmd, 1024, format, arg);
 		_nsntrace_cmd_parse(cmd, args);
-		execvp(args[0], args);
+		return execvp(args[0], args);
 	}
 }

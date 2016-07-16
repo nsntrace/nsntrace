@@ -15,6 +15,7 @@
 
 #include <pcap.h>
 #include <stdlib.h>
+#include <sys/wait.h>
 
 #include "capture.h"
 
@@ -50,9 +51,7 @@ int
 nsntrace_capture_start(const char *iface,
 		       const char *outfile)
 {
-	struct pcap_pkthdr header;
 	char errbuf[PCAP_ERRBUF_SIZE];
-	const unsigned char *packet;
 
 	if (!(handle = pcap_open_live(iface, BUFSIZ, 1, 1000, errbuf))) {
 		fprintf(stderr, "Couldn't open iface: %s\n", errbuf);

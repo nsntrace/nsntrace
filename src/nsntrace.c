@@ -14,6 +14,7 @@
  *
  */
 #define _GNU_SOURCE
+#include <grp.h>
 #include <getopt.h>
 #include <sched.h>
 #include <signal.h>
@@ -138,7 +139,6 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 {
 	uid_t uid;
 	gid_t gid;
-	char *envp[2];
 
 	/*
 	 * The getpwnam() function will return a pointer to fields in
@@ -317,7 +317,7 @@ main(int argc, char **argv)
 	/* wait here until our traced process exists or the user aborts */
 	waitpid(pid, &status, 0);
 	ret = WEXITSTATUS(status);
-out:
+
 	nsntrace_net_deinit(options.device);
 	return ret;
 }

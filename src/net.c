@@ -29,6 +29,7 @@
 #include <netlink/route/route.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
+#include <unistd.h>
 
 #include "cmd.h"
 
@@ -134,8 +135,8 @@ _nsntrace_net_iface_up(const char *iface,
 	int ret = 0;
 	struct nl_sock *sock = _nsntrace_net_get_nl_socket();
 	struct nl_cache *cache;
-	struct rtnl_link *link, *change;
-	struct rtnl_addr *rtnl_addr;
+	struct rtnl_link *link, *change = NULL;
+	struct rtnl_addr *rtnl_addr = NULL;
 	struct nl_addr *nl_addr;
 
 	if (!ip) {
@@ -252,7 +253,6 @@ _nsntrace_net_set_nat(const char *ip,
 		      const char *iface,
 		      int enable)
 {
-	char iptables_cmd[1024];
 	char modifier = (enable ? 'A' : 'D');
 	int ret = 0;
 
@@ -334,13 +334,14 @@ nsntrace_net_ns_init()
 {
 	int ret = 0;
 
-	if ((ret = _nsntrace_net_iface_up("lo", NULL, NULL)) < 0) {
-		return EXIT_FAILURE;
-	}
-
 	if ((ret = _nsntrace_net_iface_up(NS_IF, NS_IP_RANGE, GW_IP)) < 0) {
 		return EXIT_FAILURE;
 	}
+
+        if ((ret = _nsntrace_net_iface_up("lo", NULL, NULL)) < 0) {
+		return EXIT_FAILURE;
+	}
+
 
 	return ret;
 }
