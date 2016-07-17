@@ -203,8 +203,14 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 		uid = getuid();
 		gid = getgid();
 	}
-	setgid(gid);
-	setuid(uid);
+
+	if (setgid(gid) < 0) {
+		fprintf(stderr, "Unable to set process group ID");
+	}
+
+	if (setuid(uid) < 0) {
+		fprintf(stderr, "Unable to set process user ID");
+	}
 
 	/* launch the application to trace */
 	if (execvp(options->args[0], options->args) < 0) {
