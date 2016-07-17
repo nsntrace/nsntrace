@@ -18,6 +18,7 @@ install-sh
 libtool
 m4
 missing
+src/nsntrace
 stamp-h1
 *~
 *.html
