@@ -205,8 +205,12 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 		uid = getuid();
 		gid = getgid();
 	}
-	setgid(gid);
-	setuid(uid);
+	if (setgid(gid) < 0) {
+		fprintf(stderr, "Unable to set process GID");
+	}
+	if (setuid(uid) < 0) {
+		fprintf(stderr, "Unable to set process UID");
+	}
 	/*
 	 * Should we wait here until we know capturing has started before
 	 * launching the application? If so, how?
