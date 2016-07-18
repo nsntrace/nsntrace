@@ -93,6 +93,10 @@ static pid_t child_pid;
  * SIGABRT: The abort signal, most often used on one self.
  * SIGTERM: A request to a process to stop running (kill $pid),
  * SIGQUIT: Similar to SIGINT but also a request to core dump.
+ * SIGSEGV: Generally sent to process by the kernel when the
+ *	    process is accessing memory incorrectly. There are
+ *	    no gurantees for what we can do when this happens.
+ *	    But let's try to clean up!
  */
 const int nsntrace_signals[] = {
 	SIGHUP,
@@ -100,6 +104,7 @@ const int nsntrace_signals[] = {
 	SIGABRT,
 	SIGTERM,
 	SIGQUIT,
+	SIGSEGV,
 };
 
 static void

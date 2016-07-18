@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# HUP INT QUIT ABRT TERM
-signals='1 2 3 6 15'
+# HUP INT QUIT ABRT SEGV TERM
+signals='1 2 3 6 11 15'
 timeout=3
 ip="172.16.42.254"
 if=nsntrace
