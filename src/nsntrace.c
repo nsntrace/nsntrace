@@ -81,6 +81,39 @@ static struct option long_opt[] = {
 static char child_stack[STACK_SIZE];
 static pid_t child_pid;
 
+/*
+ * We will attempt to catch the signals that can make us exit since
+ * we want to remove the temporary network configurations when we elave
+ *
+ * This is hard. Which signals should we catch? This is what we have
+ * now:
+ *
+ * SIGHUP:  Disconnects a process from the parent process.
+ * SIGINT:  Same as pressing ctrl-c.
+ * SIGABRT: The abort signal, most often used on one self.
+ * SIGTERM: A request to a process to stop running (kill $pid),
+ * SIGQUIT: Similar to SIGINT but also a request to core dump.
+ */
+const int nsntrace_signals[] = {
+	SIGHUP,
+	SIGINT,
+	SIGABRT,
+	SIGTERM,
+	SIGQUIT,
+};
+
+static void
+_nsntrace_handle_signals(void (*handler)(int))
+{
+	struct sigaction action = { 0 };
+	int s;
+
+	action.sa_handler = handler;
+	for (s = 0; s < sizeof(nsntrace_signals) / sizeof(int); s++) {
+		sigaction(nsntrace_signals[s], &action, NULL);
+	}
+}
+
 static void
 _nsntrace_cleanup_ns()
 {
@@ -94,32 +127,22 @@ _nsntrace_cleanup_ns()
 }
 
 static void
+_nsntrace_cleanup() {
+	/*
+	 * Make sure we do not just die when we receive our
+	 * terminating signals. We need to clean up after
+	 * our children.
+	 */
+	printf("Capture interrupted, cleaning up\n");
+}
+
+static void
 _nsntrace_start_tracer(struct nsntrace_options *options)
 {
-	struct sigaction action = { 0 };
 	const char *ip;
 	const char *interface;
 
-	action.sa_handler = _nsntrace_cleanup_ns;
-	/*
-	 * We will attempt to catch those signals that can make us exit since
-	 * we want to remove the temporary network configurations on when we
-	 * leave.
-	 *
-	 * This is hard. Which signals should we catch? This is what we have
-	 * now:
-	 *
-	 * SIGHUP:  Disconnects a process from the parent process.
-	 * SIGINT:  Same as pressing ctrl-c.
-	 * SIGABRT: The abort signal, most often used on one self.
-	 * SIGTERM: A request to a process to stop running (kill $pid),
-	 * SIGQUIT: Similar to SIGINT but also a request to core dump.
-	 */
-	sigaction(SIGHUP, &action, NULL);
-	sigaction(SIGINT, &action, NULL);
-	sigaction(SIGABRT, &action, NULL);
-	sigaction(SIGTERM, &action, NULL);
-	sigaction(SIGQUIT, &action, NULL);
+	_nsntrace_handle_signals(_nsntrace_cleanup_ns);
 
 	ip = nsntrace_net_get_capture_ip();
 	interface = nsntrace_net_get_capture_interface();
@@ -212,12 +235,6 @@ netns_main(void *arg) {
 }
 
 static void
-sigint_handler_main(int sig) {
-	/* catch SIGINT */
-	printf("Capture interrupted, cleaning up\n");
-}
-
-static void
 _nsntrace_usage()
 {
 	printf("usage: nsntrace [-o file] [-d device] "
@@ -307,7 +324,7 @@ main(int argc, char **argv)
 	pid = clone(netns_main, child_stack + STACK_SIZE,
 		    CLONE_NEWNET | SIGCHLD, &options);
 
-	signal(SIGINT, sigint_handler_main);
+	_nsntrace_handle_signals(_nsntrace_cleanup);
 
 	if ((ret = nsntrace_net_init(pid, options.device)) < 0) {
 		fprintf(stderr, "Failed to setup networking environment\n");
