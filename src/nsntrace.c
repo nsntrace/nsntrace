@@ -66,14 +66,16 @@ struct nsntrace_options {
 	char *outfile;
 	char *device;
 	char *user;
+	char *filter;
 	char * const *args;
 };
 
-static const char *short_opt = "o:d:u:h";
+static const char *short_opt = "o:d:u:f:h";
 static struct option long_opt[] = {
 	{ "outfile", required_argument, NULL, 'o' },
 	{ "device",  required_argument, NULL, 'd' },
 	{ "user",    required_argument, NULL, 'u' },
+	{ "filter",  required_argument, NULL, 'f' },
 	{ "help",    required_argument, NULL, 'h' },
 	{ NULL,	     0,			NULL,  0 }
 };
@@ -156,7 +158,7 @@ _nsntrace_start_tracer(struct nsntrace_options *options)
 	       "Your IP address in this trace is %s.\n"
 	       "Use ctrl-c to end at any time.\n\n",
 	       options->args[0], options->device, ip);
-	nsntrace_capture_start(interface, options->outfile);
+	nsntrace_capture_start(interface, options->filter, options->outfile);
 
 	/* broken out of capture loop, clean up */
 	_nsntrace_cleanup_ns();
@@ -248,6 +250,7 @@ _nsntrace_usage()
 	       "network namespaces.\n\n"
 	       "-o file\t\tsend trace output to file (default nsntrace.pcap)\n"
 	       "-d device\tthe network device to trace\n"
+	       "-f filter\tan optional capture filter\n"
 	       "-u username\trun PROG as username\n");
 }
 
@@ -274,6 +277,10 @@ _nsntrace_parse_options(struct nsntrace_options *options,
 
 		case 'u':
 			options->user = strdup(optarg);
+			break;
+
+		case 'f':
+			options->filter = strdup(optarg);
 			break;
 
 		case 'h':

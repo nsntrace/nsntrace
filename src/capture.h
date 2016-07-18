@@ -17,7 +17,8 @@
 #define _NSNTRACE_CAPTURE_H
 
 int nsntrace_capture_start(const char *iface,
-                         const char *outfile);
+                           const char *filter,
+                           const char *outfile);
 
 unsigned long nsntrace_capture_packet_count();
 

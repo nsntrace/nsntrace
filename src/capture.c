@@ -49,13 +49,25 @@ _nsntrace_capture_callback(unsigned char *user_data,
 
 int
 nsntrace_capture_start(const char *iface,
+		       const char *filter,
 		       const char *outfile)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
+	struct bpf_program fp;
 
 	if (!(handle = pcap_open_live(iface, BUFSIZ, 1, 1000, errbuf))) {
 		fprintf(stderr, "Couldn't open iface: %s\n", errbuf);
 		return EXIT_FAILURE;
+	}
+
+	if (filter) {
+		int ret = pcap_compile(handle, &fp, filter,
+				       0, PCAP_NETMASK_UNKNOWN);
+		if (ret < 0) {
+			fprintf(stderr, "Failed to set filter: %s\n", filter);
+		} else {
+			pcap_setfilter(handle, &fp);
+		}
 	}
 
 	if (!(pcap_dumper = pcap_dump_open(handle, outfile))) {
