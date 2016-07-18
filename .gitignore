@@ -21,6 +21,7 @@ missing
 test-driver
 *.trs
 src/nsntrace
+tests/udp_send
 stamp-h1
 *~
 *.html
