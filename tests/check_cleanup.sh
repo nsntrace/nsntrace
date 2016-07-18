@@ -19,12 +19,14 @@ function check_cleanup() {
         echo "Link not cleaned up after signal $signal"
         exit 1
     }
+
+    rm -rf *.pcap
 }
 
 function start_and_kill() {
     local signal=$1
 
-    sudo ../src/nsntrace -o $signal.pcap ./test_program_dummy.sh &
+    sudo ../src/nsntrace ./test_program_dummy.sh &
     sleep $timeout
     pid=$(pidof nsntrace)
     sudo kill -$signal $pid
