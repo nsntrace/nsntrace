@@ -18,6 +18,8 @@ install-sh
 libtool
 m4
 missing
+test-driver
+*.trs
 src/nsntrace
 stamp-h1
 *~
