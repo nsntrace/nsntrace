@@ -206,10 +206,10 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 		gid = getgid();
 	}
 	if (setgid(gid) < 0) {
-		fprintf(stderr, "Unable to set process GID");
+		fprintf(stderr, "Unable to set process group ID");
 	}
 	if (setuid(uid) < 0) {
-		fprintf(stderr, "Unable to set process UID");
+		fprintf(stderr, "Unable to set process user ID");
 	}
 	/*
 	 * Should we wait here until we know capturing has started before
