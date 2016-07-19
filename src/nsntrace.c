@@ -59,6 +59,7 @@
  *
  */
 
+#define APP_TIMEOUT (2000000L) /* 2 seconds */
 #define STACK_SIZE (1024 * 64) /* 64 kB stack */
 #define DEFAULT_OUTFILE "nsntrace.pcap"
 
@@ -149,8 +150,6 @@ _nsntrace_start_tracer(struct nsntrace_options *options)
 	const char *ip;
 	const char *interface;
 
-	_nsntrace_handle_signals(_nsntrace_cleanup_ns);
-
 	ip = nsntrace_net_get_capture_ip();
 	interface = nsntrace_net_get_capture_interface();
 
@@ -159,9 +158,6 @@ _nsntrace_start_tracer(struct nsntrace_options *options)
 	       "Use ctrl-c to end at any time.\n\n",
 	       options->args[0], options->device, ip);
 	nsntrace_capture_start(interface, options->filter, options->outfile);
-
-	/* broken out of capture loop, clean up */
-	_nsntrace_cleanup_ns();
 }
 
 static void
@@ -209,11 +205,8 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 	}
 	setgid(gid);
 	setuid(uid);
-	/*
-	 * Should we wait here until we know capturing has started before
-	 * launching the application? If so, how?
-	 */
-	usleep(1000000);
+
+	/* launch the application to trace */
 	if (execvp(options->args[0], options->args) < 0) {
 		fprintf(stderr, "Unable to start '%s'\n", options->args[0]);
 	}
@@ -229,11 +222,23 @@ netns_main(void *arg) {
 		return EXIT_FAILURE;
 	}
 
+	_nsntrace_handle_signals(_nsntrace_cleanup_ns);
+	_nsntrace_start_tracer(options);
+
 	child_pid = fork();
 	if (child_pid < 0) {
 		return EXIT_FAILURE;
 	} else if (child_pid > 0) { /* parent - tracer */
-		_nsntrace_start_tracer(options);
+		waitpid(child_pid, NULL, 0);
+
+		/* sleep so that all packets can be processed */
+		usleep(APP_TIMEOUT);
+
+		/* the tracee exited, we waited, stop capture */
+		nsntrace_capture_stop();
+
+		/* broken out of capture loop, clean up */
+		_nsntrace_cleanup_ns();
 	} else { /* child - tracee */
 		_nsntrace_start_tracee(options);
 	}

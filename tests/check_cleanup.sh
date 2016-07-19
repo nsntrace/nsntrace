@@ -2,7 +2,7 @@
 
 # HUP INT QUIT ABRT SEGV TERM
 signals='1 2 3 6 11 15'
-timeout=3
+timeout=1
 ip="172.16.42.254"
 if=nsntrace
 

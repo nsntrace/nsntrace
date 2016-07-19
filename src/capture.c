@@ -14,6 +14,7 @@
  */
 
 #include <pcap.h>
+#include <pthread.h>
 #include <stdlib.h>
 #include <sys/wait.h>
 
@@ -30,6 +31,7 @@
 
 static pcap_dumper_t *pcap_dumper;
 static pcap_t *handle;
+static pthread_t capture_thread;
 static unsigned long packet_count;
 
 static void
@@ -37,14 +39,25 @@ _nsntrace_capture_callback(unsigned char *user_data,
 			   struct pcap_pkthdr *header,
 			   unsigned char *package)
 {
-	int ret;
-
 	packet_count++;
 	pcap_dump(user_data, header, package);
+}
 
-	if ((ret = waitpid(-1, NULL, WNOHANG)) < 0) {
-		pcap_breakloop(handle);
-	}
+static void *
+_nsntrace_capture_thread(void *data)
+{
+	pcap_loop(handle, -1, (pcap_handler) _nsntrace_capture_callback,
+		  (unsigned char *) pcap_dumper);
+	pcap_close(handle);
+
+	return NULL;
+}
+
+void
+nsntrace_capture_stop()
+{
+	pcap_breakloop(handle);
+	pthread_join(capture_thread, NULL);
 }
 
 int
@@ -54,6 +67,7 @@ nsntrace_capture_start(const char *iface,
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
 	struct bpf_program fp;
+	int ret;
 
 	if (!(handle = pcap_open_live(iface, BUFSIZ, 1, 1000, errbuf))) {
 		fprintf(stderr, "Couldn't open iface: %s\n", errbuf);
@@ -61,8 +75,8 @@ nsntrace_capture_start(const char *iface,
 	}
 
 	if (filter) {
-		int ret = pcap_compile(handle, &fp, filter,
-				       0, PCAP_NETMASK_UNKNOWN);
+		ret = pcap_compile(handle, &fp, filter,
+				   0, PCAP_NETMASK_UNKNOWN);
 		if (ret < 0) {
 			fprintf(stderr, "Failed to set filter: %s\n", filter);
 		} else {
@@ -76,9 +90,12 @@ nsntrace_capture_start(const char *iface,
 		return EXIT_FAILURE;
 	}
 
-	pcap_loop(handle, -1, (pcap_handler) _nsntrace_capture_callback,
-		  (unsigned char *) pcap_dumper);
-	pcap_close(handle);
+	ret = pthread_create(&capture_thread, NULL,
+			    _nsntrace_capture_thread, NULL);
+	if (ret != 0) {
+		fprintf(stderr, "Failed to create capture thread\n");
+		return EXIT_FAILURE;
+	}
 
 	return EXIT_SUCCESS;
 }

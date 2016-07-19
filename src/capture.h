@@ -20,6 +20,8 @@ int nsntrace_capture_start(const char *iface,
                            const char *filter,
                            const char *outfile);
 
+void nsntrace_capture_stop();
+
 unsigned long nsntrace_capture_packet_count();
 
 void nsntrace_capture_flush();

@@ -15,4 +15,4 @@ sources =			\
 
 nsntrace_SOURCES = $(headers) $(sources)
 nsntrace_CPPFLAGS = $(LIBNL_CFLAGS) $(warnings)
-nsntrace_LDFLAGS = $(LIBNL_LIBS)
+nsntrace_LDFLAGS = $(LIBNL_LIBS) -pthread
