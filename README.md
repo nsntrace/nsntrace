@@ -36,6 +36,7 @@ we are tracing raw sockets. This application needs to be run as root.
 
     -o file		send trace output to file (default nsntrace.pcap)
     -d device	the network device to trace
+    -f filter	an optional capture filter
     -u username	run PROG as username
 
 ## example
