@@ -1,4 +1,12 @@
-AC_INIT([nsntrace], [1.0], [https://github.com/jonasdn/ntrace])
+# AC_INIT([package],
+#         [version],
+#         [bug reports],
+#         [tar-ball name])
+AC_INIT([nsntrace],
+	[1],
+	[https://github.com/jonasdn/nsntrace/issues],
+	[nsntrace])
+
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AM_PROG_CC_C_O
 AC_CONFIG_HEADERS([config.h])
