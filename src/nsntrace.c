@@ -41,7 +41,7 @@
  * the packets we trace come from the process.
  *
  * The problem we are left with is that the process is isolated in the
- * namespace and can not reach any other network. We get around that by
+ * namespace and cannot reach any other network. We get around that by
  * creating virtual network interfaces. We keep one of them in the
  * root network namespace and but the other one in the newly created one where
  * our tracing takes place. We set the root namespaced one as the default gw
@@ -98,7 +98,7 @@ static pid_t child_pid;
  * SIGQUIT: Similar to SIGINT but also a request to core dump.
  * SIGSEGV: Generally sent to process by the kernel when the
  *	    process is accessing memory incorrectly. There are
- *	    no gurantees for what we can do when this happens.
+ *	    no guarantees for what we can do when this happens.
  *	    But let's try to clean up!
  */
 const int nsntrace_signals[] = {

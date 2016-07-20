@@ -12,7 +12,7 @@ requested process as well as start a trace using libpcap. This will ensure that 
 the packets we trace come from the process.
 
 The problem we are left with is that the process is isolated in the
-namespace and can not reach any other network. We get around that by
+namespace and cannot reach any other network. We get around that by
 creating virtual network interfaces. We keep one of them in the
 root network namespace and but the other one in the newly created one where
 our tracing takes place. We set the root namespaced one as the default gw
