@@ -22,6 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 #include <pwd.h>
 
@@ -59,7 +60,6 @@
  *
  */
 
-#define APP_TIMEOUT (2000000L) /* 2 seconds */
 #define STACK_SIZE (1024 * 64) /* 64 kB stack */
 #define DEFAULT_OUTFILE "nsntrace.pcap"
 
@@ -240,10 +240,16 @@ netns_main(void *arg) {
 	if (child_pid < 0) {
 		return EXIT_FAILURE;
 	} else if (child_pid > 0) { /* parent - tracer */
-		waitpid(child_pid, NULL, 0);
+		struct timespec timeout = { 0 };
 
-		/* sleep so that all packets can be processed */
-		usleep(APP_TIMEOUT);
+		waitpid(child_pid, NULL, 0);
+		/*
+		 * Sleep so that all packets can be processed.
+		 * Do not bother with error handling for this,
+		 * it is best effort to catch all packets.
+		 */
+		timeout.tv_sec = 2; /* 2 seconds timeout */
+		nanosleep(&timeout, NULL);
 
 		/* the tracee exited, we waited, stop capture */
 		nsntrace_capture_stop();
