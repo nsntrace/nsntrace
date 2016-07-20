@@ -198,18 +198,23 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 		 * The initgroups() function needs to be run before we
 		 * lose privileges (setuid).
 		 */
-		initgroups(options->user, gid);
+		if (initgroups(options->user, gid) < 0) {
+			fprintf(stderr, "Failed to initialize groups\n");
+			exit(EXIT_FAILURE);
+		}
 	} else {
 		uid = getuid();
 		gid = getgid();
 	}
 
 	if (setgid(gid) < 0) {
-		fprintf(stderr, "Unable to set process group ID");
+		fprintf(stderr, "Unable to set process group ID\n");
+		exit(EXIT_FAILURE);
 	}
 
 	if (setuid(uid) < 0) {
-		fprintf(stderr, "Unable to set process user ID");
+		fprintf(stderr, "Unable to set process user ID\n");
+		exit(EXIT_FAILURE);
 	}
 
 	/* launch the application to trace */
