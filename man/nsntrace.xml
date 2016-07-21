@@ -1,0 +1,121 @@
+<?xml version='1.0'?> <!--*-nxml-*-->
+<!DOCTYPE refentry PUBLIC "-//OASIS//DTD DocBook XML V4.2//EN"
+"http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
+
+<refentry id="nsntrace" xmlns:xi="http://www.w3.org/2001/XInclude">
+
+  <refentryinfo>
+    <title>nsntrace</title>
+    <productname>nsntrace</productname>
+
+    <authorgroup>
+      <author>
+        <firstname>Jonas</firstname>
+        <surname>Danielsson</surname>
+        <email>jonas@threetimestwo.org</email>
+        <contrib>Original author</contrib>
+      </author>
+    </authorgroup>
+  </refentryinfo>
+
+  <refmeta>
+    <refentrytitle>nsntrace</refentrytitle>
+    <manvolnum>1</manvolnum>
+  </refmeta>
+
+  <refnamediv>
+    <refname>nsntrace</refname>
+    <refpurpose>
+      Perform a network trace of a process by using Linux network namespaces
+    </refpurpose>
+  </refnamediv>
+
+  <refsynopsisdiv>
+    <cmdsynopsis>
+      <command>nsntrace</command>
+      <arg choice="opt">options</arg>
+      <arg choice="plain"><replaceable>program</replaceable></arg>
+      <arg choice="opt">arguments</arg>
+    </cmdsynopsis>
+  </refsynopsisdiv>
+
+  <refsect1>
+    <title>Description</title>
+
+    <para><command>nsntrace</command> uses Linux network namespaces to
+    perform network traces of the specified <replaceable>program</replaceable>.
+    The traces are stored as pcap files. And can later be analyzed by
+    applications such as <command>wireshark</command>.</para>
+
+    <para><command>nsntrace</command> creates a new network namespace and
+    launches the specified <replaceable>program</replaceable> in it. This
+    will ensure that all the packets we trace come from the system or
+    the specified <replaceable>program</replaceable>.</para>
+
+    <para>To get around the isolation caused by the network namespace a
+    virtual network interface is created. And in order for the
+    <replaceable>program</replaceable> network traffic to reach the root
+    network namespace <command>iptables</command> is used.</para>
+
+    <para>Since <command>nsntrace</command> uses iptables and traces raw
+    sockets it needs to be run as root.</para>
+  </refsect1>
+
+  <refsect1>
+    <title>Options</title>
+
+    <para>The following options are understood:</para>
+
+
+    <variablelist>
+      <varlistentry>
+        <term><option>--device <replaceable>dev</replaceable></option></term>
+        <term><option>-d <replaceable>dev</replaceable></option></term>
+
+        <listitem><para>
+          The network device to use in trace.
+        </para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--outfile <replaceable>file</replaceable></option></term>
+        <term><option>-o <replaceable>file</replaceable></option></term>
+
+        <listitem><para>
+          Write the trace output to the file <replaceable>file</replaceable>.
+          Default is nsntrace.pcap.
+        </para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>--user <replaceable>user</replaceable></option></term>
+        <term><option>-u <replaceable>user</replaceable></option></term>
+
+        <listitem><para>
+          Run program with the user ID, group ID and supplementary groups
+          of <replaceable>user</replaceable>.
+        </para></listitem>
+      </varlistentry>
+
+      <varlistentry>
+        <term><option>
+          --filter <replaceable>filter</replaceable></option></term>
+        <term><option>-f <replaceable>filter</replaceable></option></term>
+
+        <listitem><para>
+          The capture filter to use while capturing. See <citerefentry>
+          <refentrytitle>pcap-filter</refentrytitle><manvolnum>7</manvolnum>
+          </citerefentry> for <replaceable>filter</replaceable> syntax.
+        </para></listitem>
+      </varlistentry>
+
+      </variablelist>
+  </refsect1>
+
+  <refsect1>
+    <title>Exit status</title>
+
+    <para>On success, 0 is returned; otherwise, a non-zero failure
+    code is returned.</para>
+  </refsect1>
+</refentry>
