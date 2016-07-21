@@ -266,10 +266,10 @@ netns_main(void *arg) {
 static void
 _nsntrace_usage()
 {
-	printf("usage: nsntrace [-o file] [-d device] "
-	       "[-u username] PROG [ARGS]\n"
+	printf("usage: nsntrace [options] program [arguments]\n"
 	       "Perform network trace of a single process by using "
 	       "network namespaces.\n\n"
+	       "Options:\n"
 	       "-o file\t\tsend trace output to file (default nsntrace.pcap)\n"
 	       "-d device\tthe network device to trace\n"
 	       "-f filter\tan optional capture filter\n"

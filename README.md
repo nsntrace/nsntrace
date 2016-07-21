@@ -31,13 +31,14 @@ we are tracing raw sockets. This application needs to be run as root.
 
 ## usage
     > nsntrace
-    usage: nsntrace [-o file] [-d device] [-u username] PROG [ARGS]
+    usage: nsntrace [options] program [arguments]
     Perform network trace of a single process by using network namespaces.
 
-    -o file		send trace output to file (default nsntrace.pcap)
-    -d device	the network device to trace
-    -f filter	an optional capture filter
-    -u username	run PROG as username
+    Options:
+    -o file     send trace output to file (default nsntrace.pcap)
+    -d device   the network device to trace
+    -f filter   an optional capture filter
+    -u username run program as username
 
 ## example
     > sudo nsntrace -d eth1 wget www.google.com
