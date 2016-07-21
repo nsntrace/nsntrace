@@ -3,9 +3,9 @@
 #         [bug reports],
 #         [tar-ball name])
 AC_INIT([nsntrace],
-	[1],
-	[https://github.com/jonasdn/nsntrace/issues],
-	[nsntrace])
+        [1],
+        [https://github.com/jonasdn/nsntrace/issues],
+        [nsntrace])
 
 AM_INIT_AUTOMAKE([foreign -Wall -Werror])
 AM_PROG_CC_C_O
@@ -18,7 +18,7 @@ AC_CHECK_HEADERS([pcap/pcap.h])
 
 AC_CHECK_PROG(IPTABLES_CHECK,iptables,yes)
 if test x"$IPTABLES_CHECK" != x"yes"; then
-   AC_MSG_ERROR([You need to have iptables installed,])
+   AC_MSG_ERROR([You need to have iptables installed])
 fi
 
 # Check for libnl
