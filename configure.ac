@@ -3,7 +3,7 @@
 #         [bug reports],
 #         [tar-ball name])
 AC_INIT([nsntrace],
-        [1],
+        [2],
         [https://github.com/jonasdn/nsntrace/issues],
         [nsntrace])
 
