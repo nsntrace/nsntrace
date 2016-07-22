@@ -142,6 +142,9 @@ _nsntrace_cleanup() {
 	 * our children.
 	 */
 	printf("Capture interrupted, cleaning up\n");
+
+	/* wait for our children */
+	wait(NULL);
 }
 
 static void
