@@ -71,7 +71,7 @@ struct nsntrace_options {
 	char * const *args;
 };
 
-static const char *short_opt = "o:d:u:f:h";
+static const char *short_opt = "+o:d:u:f:h";
 static struct option long_opt[] = {
 	{ "outfile", required_argument, NULL, 'o' },
 	{ "device",  required_argument, NULL, 'd' },
