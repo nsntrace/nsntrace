@@ -230,6 +230,7 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 	/* launch the application to trace */
 	if (execvp(options->args[0], options->args) < 0) {
 		fprintf(stderr, "Unable to start '%s'\n", options->args[0]);
+		exit(EXIT_FAILURE);
 	}
 }
 
