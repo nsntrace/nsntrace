@@ -240,7 +240,7 @@ netns_main(void *arg) {
 	int ret = EXIT_SUCCESS;
 	struct nsntrace_options *options = (struct nsntrace_options *) arg;
 
-	if ((ret = nsntrace_net_ns_init()) < 0) {
+	if (nsntrace_net_ns_init() < 0) {
 		fprintf(stderr, "failed to setup network environment\n");
 		return EXIT_FAILURE;
 	}
