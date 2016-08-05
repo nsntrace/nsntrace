@@ -6,7 +6,7 @@ timeout=1
 ip="172.16.42.254"
 if=nsntrace
 
-function check_cleanup() {
+check_cleanup() {
     # sleep to allow for cleanup after signal
     sleep 1
 
@@ -23,7 +23,7 @@ function check_cleanup() {
     rm -rf *.pcap
 }
 
-function start_and_kill() {
+start_and_kill() {
     local signal=$1
 
     sudo ../src/nsntrace ./test_program_dummy.sh &
