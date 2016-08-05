@@ -36,3 +36,4 @@ stamp-h1
 *.lo
 *.gcno
 *.gcda
+man/*.1
