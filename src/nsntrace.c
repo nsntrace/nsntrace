@@ -376,6 +376,10 @@ main(int argc, char **argv)
 	/* here we create a new process in a new network namespace */
 	pid = clone(netns_main, child_stack + STACK_SIZE,
 		    CLONE_NEWNET | SIGCHLD, &options);
+	if (pid < 0) {
+		fprintf(stderr, "clone failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	_nsntrace_handle_signals(_nsntrace_cleanup);
 
