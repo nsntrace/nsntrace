@@ -1,6 +1,7 @@
 TESTS =			\
 	check_namespaced.sh	\
-	check_cleanup.sh
+	check_cleanup.sh	\
+	check_return_code.sh
 
 check_namespaced.sh: udp_send
 

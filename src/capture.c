@@ -16,6 +16,7 @@
 #include <pcap.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/wait.h>
 
 #include "capture.h"
@@ -79,6 +80,7 @@ nsntrace_capture_start(const char *iface,
 				   0, PCAP_NETMASK_UNKNOWN);
 		if (ret < 0) {
 			fprintf(stderr, "Failed to set filter: %s\n", filter);
+			return EXIT_FAILURE;
 		} else {
 			pcap_setfilter(handle, &fp);
 		}
@@ -116,4 +118,28 @@ char *
 nsntrace_capture_default_device()
 {
 	return pcap_lookupdev(NULL);
+}
+
+int
+nsntrace_capture_check_device(char *iface)
+{
+	pcap_if_t *dev;
+	pcap_if_t *devList;
+
+	char errbuf[PCAP_ERRBUF_SIZE];
+
+	if (pcap_findalldevs(&devList, errbuf) == -1) {
+		fprintf(stderr, "pcap_findalldevs: %s\n", errbuf);
+		return EXIT_FAILURE;
+	}
+
+	for (dev = devList; dev != NULL; dev = dev->next) {
+		if (strcmp(dev->name, iface) == 0) {
+			return EXIT_SUCCESS;
+		}
+	}
+
+	fprintf(stderr, "Unknown interface: %s\n", iface);
+
+	return EXIT_FAILURE;
 }

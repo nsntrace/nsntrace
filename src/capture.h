@@ -27,4 +27,6 @@ unsigned long nsntrace_capture_packet_count();
 void nsntrace_capture_flush();
 
 char *nsntrace_capture_default_device();
+
+int nsntrace_capture_check_device(char *iface);
 #endif

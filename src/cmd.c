@@ -16,6 +16,7 @@
 
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -61,6 +62,9 @@ nsntrace_cmd_run(char *format, ...)
 		int status;
 
 		waitpid(pid, &status, 0);
+		if (!WIFEXITED(status)) {
+			return EXIT_FAILURE;
+		}
 		return WEXITSTATUS(status);
 	} else { /* child */
 		char *args[64];

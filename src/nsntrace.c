@@ -131,6 +131,12 @@ _nsntrace_cleanup_ns()
 	printf("Finished capturing %lu packets.\n",
 	       nsntrace_capture_packet_count());
 	nsntrace_capture_flush();
+}
+
+static void
+_nsntrace_cleanup_ns_signal_callback()
+{
+	_nsntrace_cleanup_ns();
 	exit(EXIT_SUCCESS);
 }
 
@@ -150,6 +156,7 @@ _nsntrace_cleanup() {
 static void
 _nsntrace_start_tracer(struct nsntrace_options *options)
 {
+	int ret;
 	const char *ip;
 	const char *interface;
 
@@ -160,7 +167,10 @@ _nsntrace_start_tracer(struct nsntrace_options *options)
 	       "Your IP address in this trace is %s.\n"
 	       "Use ctrl-c to end at any time.\n\n",
 	       options->args[0], options->device, ip);
-	nsntrace_capture_start(interface, options->filter, options->outfile);
+	ret = nsntrace_capture_start(interface, options->filter, options->outfile);
+	if (ret != 0) {
+		exit(ret);
+	}
 }
 
 static void
@@ -184,7 +194,7 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 		if (!(pwd = getpwnam(options->user))) {
 			fprintf(stderr,"Cannot find user '%s'\n",
 				options->user);
-			_nsntrace_cleanup_ns();
+			exit(EXIT_FAILURE);
 		}
 		uid = pwd->pw_uid;
 		gid = pwd->pw_gid;
@@ -223,20 +233,22 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 	/* launch the application to trace */
 	if (execvp(options->args[0], options->args) < 0) {
 		fprintf(stderr, "Unable to start '%s'\n", options->args[0]);
+		exit(EXIT_FAILURE);
 	}
 }
 
 static int
 netns_main(void *arg) {
-	int ret;
+	int status;
+	int ret = EXIT_SUCCESS;
 	struct nsntrace_options *options = (struct nsntrace_options *) arg;
 
-	if ((ret = nsntrace_net_ns_init()) < 0) {
+	if (nsntrace_net_ns_init() < 0) {
 		fprintf(stderr, "failed to setup network environment\n");
 		return EXIT_FAILURE;
 	}
 
-	_nsntrace_handle_signals(_nsntrace_cleanup_ns);
+	_nsntrace_handle_signals(_nsntrace_cleanup_ns_signal_callback);
 	_nsntrace_start_tracer(options);
 
 	child_pid = fork();
@@ -245,7 +257,13 @@ netns_main(void *arg) {
 	} else if (child_pid > 0) { /* parent - tracer */
 		struct timespec timeout = { 0 };
 
-		waitpid(child_pid, NULL, 0);
+		waitpid(child_pid, &status, 0);
+		if (WIFEXITED(status)) {
+			ret = WEXITSTATUS(status);
+		} else {
+			ret = EXIT_FAILURE;
+		}
+
 		/*
 		 * Sleep so that all packets can be processed.
 		 * Do not bother with error handling for this,
@@ -259,11 +277,12 @@ netns_main(void *arg) {
 
 		/* broken out of capture loop, clean up */
 		_nsntrace_cleanup_ns();
+		exit(ret);
 	} else { /* child - tracee */
 		_nsntrace_start_tracee(options);
 	}
 
-	return 0;
+	return ret;
 }
 
 static void
@@ -360,18 +379,29 @@ main(int argc, char **argv)
 	/* here we create a new process in a new network namespace */
 	pid = clone(netns_main, child_stack + STACK_SIZE,
 		    CLONE_NEWNET | SIGCHLD, &options);
+	if (pid < 0) {
+		fprintf(stderr, "clone failed\n");
+		exit(EXIT_FAILURE);
+	}
 
 	_nsntrace_handle_signals(_nsntrace_cleanup);
 
-	if ((ret = nsntrace_net_init(pid, options.device)) < 0) {
+	if ((ret = nsntrace_net_init(pid, options.device)) < 0 ||
+			(ret = nsntrace_capture_check_device(options.device))) {
 		fprintf(stderr, "Failed to setup networking environment\n");
 		kill(pid, SIGTERM);
+		goto out;
 	}
 
 	/* wait here until our traced process exists or the user aborts */
 	waitpid(pid, &status, 0);
-	ret = WEXITSTATUS(status);
+	if (WIFEXITED(status)) {
+		ret = WEXITSTATUS(status);
+	} else {
+		ret = EXIT_FAILURE;
+	}
 
+out:
 	nsntrace_net_deinit(options.device);
 	return ret;
 }
