@@ -79,6 +79,7 @@ nsntrace_capture_start(const char *iface,
 				   0, PCAP_NETMASK_UNKNOWN);
 		if (ret < 0) {
 			fprintf(stderr, "Failed to set filter: %s\n", filter);
+			return EXIT_FAILURE;
 		} else {
 			pcap_setfilter(handle, &fp);
 		}
