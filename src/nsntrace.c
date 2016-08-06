@@ -156,6 +156,7 @@ _nsntrace_cleanup() {
 static void
 _nsntrace_start_tracer(struct nsntrace_options *options)
 {
+	int ret;
 	const char *ip;
 	const char *interface;
 
@@ -166,7 +167,10 @@ _nsntrace_start_tracer(struct nsntrace_options *options)
 	       "Your IP address in this trace is %s.\n"
 	       "Use ctrl-c to end at any time.\n\n",
 	       options->args[0], options->device, ip);
-	nsntrace_capture_start(interface, options->filter, options->outfile);
+	ret = nsntrace_capture_start(interface, options->filter, options->outfile);
+	if (ret != 0) {
+		exit(ret);
+	}
 }
 
 static void
