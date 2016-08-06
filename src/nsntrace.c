@@ -382,6 +382,7 @@ main(int argc, char **argv)
 	if ((ret = nsntrace_net_init(pid, options.device)) < 0) {
 		fprintf(stderr, "Failed to setup networking environment\n");
 		kill(pid, SIGTERM);
+		goto out;
 	}
 
 	/* wait here until our traced process exists or the user aborts */
@@ -392,6 +393,7 @@ main(int argc, char **argv)
 		ret = EXIT_FAILURE;
 	}
 
+out:
 	nsntrace_net_deinit(options.device);
 	return ret;
 }
