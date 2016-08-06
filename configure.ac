@@ -17,7 +17,7 @@ AC_CONFIG_FILES([Makefile
 
 # Check for pcap
 AC_CHECK_LIB([pcap],[pcap_create])
-AC_CHECK_HEADERS([pcap/pcap.h])
+AC_CHECK_HEADERS([pcap/pcap.h],[],AC_MSG_ERROR([You need to have libpcap development package installed]))
 
 have_manpages=no
 AC_ARG_ENABLE(manpages, AS_HELP_STRING([--disable-manpages],[disable manpages]))
