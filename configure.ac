@@ -29,7 +29,7 @@ AS_IF([test "x$enable_manpages" != xno], [
 ])
 AM_CONDITIONAL(ENABLE_MANPAGES, [test "x$have_manpages" = "xyes"])
 
-AC_CHECK_PROG(IPTABLES_CHECK,iptables,yes)
+AC_CHECK_PROG(IPTABLES_CHECK,iptables,yes,no,"$PATH:/sbin:/usr/sbin")
 if test x"$IPTABLES_CHECK" != x"yes"; then
    AC_MSG_ERROR([You need to have iptables installed])
 fi
