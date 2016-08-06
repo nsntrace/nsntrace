@@ -386,7 +386,11 @@ main(int argc, char **argv)
 
 	/* wait here until our traced process exists or the user aborts */
 	waitpid(pid, &status, 0);
-	ret = WEXITSTATUS(status);
+	if (WIFEXITED(status)) {
+		ret = WEXITSTATUS(status);
+	} else {
+		ret = EXIT_FAILURE;
+	}
 
 	nsntrace_net_deinit(options.device);
 	return ret;
