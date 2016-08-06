@@ -131,6 +131,12 @@ _nsntrace_cleanup_ns()
 	printf("Finished capturing %lu packets.\n",
 	       nsntrace_capture_packet_count());
 	nsntrace_capture_flush();
+}
+
+static void
+_nsntrace_cleanup_ns_signal_callback()
+{
+	_nsntrace_cleanup_ns();
 	exit(EXIT_SUCCESS);
 }
 
@@ -185,6 +191,7 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 			fprintf(stderr,"Cannot find user '%s'\n",
 				options->user);
 			_nsntrace_cleanup_ns();
+			exit(EXIT_FAILURE);
 		}
 		uid = pwd->pw_uid;
 		gid = pwd->pw_gid;
@@ -228,7 +235,8 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 
 static int
 netns_main(void *arg) {
-	int ret;
+	int status;
+	int ret = EXIT_SUCCESS;
 	struct nsntrace_options *options = (struct nsntrace_options *) arg;
 
 	if ((ret = nsntrace_net_ns_init()) < 0) {
@@ -236,7 +244,7 @@ netns_main(void *arg) {
 		return EXIT_FAILURE;
 	}
 
-	_nsntrace_handle_signals(_nsntrace_cleanup_ns);
+	_nsntrace_handle_signals(_nsntrace_cleanup_ns_signal_callback);
 	_nsntrace_start_tracer(options);
 
 	child_pid = fork();
@@ -245,7 +253,13 @@ netns_main(void *arg) {
 	} else if (child_pid > 0) { /* parent - tracer */
 		struct timespec timeout = { 0 };
 
-		waitpid(child_pid, NULL, 0);
+		waitpid(child_pid, &status, 0);
+		if (WIFEXITED(status)) {
+			ret = WEXITSTATUS(status);
+		} else {
+			ret = EXIT_FAILURE;
+		}
+
 		/*
 		 * Sleep so that all packets can be processed.
 		 * Do not bother with error handling for this,
@@ -259,11 +273,12 @@ netns_main(void *arg) {
 
 		/* broken out of capture loop, clean up */
 		_nsntrace_cleanup_ns();
+		exit(ret);
 	} else { /* child - tracee */
 		_nsntrace_start_tracee(options);
 	}
 
-	return 0;
+	return ret;
 }
 
 static void
