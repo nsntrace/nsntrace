@@ -23,4 +23,6 @@ check_return_code 0 /bin/true
 check_return_code 1 /bin/false
 check_return_code 1 /bin/does-not-exist
 
+check_return_code 1 -u username-does-not-exist /bin/true
+
 exit ${RET}

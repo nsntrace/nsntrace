@@ -194,7 +194,6 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 		if (!(pwd = getpwnam(options->user))) {
 			fprintf(stderr,"Cannot find user '%s'\n",
 				options->user);
-			_nsntrace_cleanup_ns();
 			exit(EXIT_FAILURE);
 		}
 		uid = pwd->pw_uid;
