@@ -25,5 +25,6 @@ check_return_code 1 /bin/does-not-exist
 
 check_return_code 1 -u username-does-not-exist /bin/true
 check_return_code 1 -f "broken filter" /bin/true
+check_return_code 1 -o /path/does/not/exist /bin/true
 
 exit ${RET}
