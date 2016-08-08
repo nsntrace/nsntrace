@@ -191,7 +191,12 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 	if (options->user) {
 		struct passwd* pwd;
 
-		if (!(pwd = getpwnam(options->user))) {
+		if (sscanf(options->user, "%i", &uid) == 1) {
+			pwd = getpwuid(uid);
+		} else {
+			pwd = getpwnam(options->user);
+		}
+		if (!pwd) {
 			fprintf(stderr,"Cannot find user '%s'\n",
 				options->user);
 			exit(EXIT_FAILURE);
@@ -295,7 +300,7 @@ _nsntrace_usage()
 	       "-o file\t\tsend trace output to file (default nsntrace.pcap)\n"
 	       "-d device\tthe network device to trace\n"
 	       "-f filter\tan optional capture filter\n"
-	       "-u username\trun PROG as username\n");
+	       "-u username\trun PROG as username/uid\n");
 }
 
 static void
