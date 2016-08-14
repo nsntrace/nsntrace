@@ -14,7 +14,7 @@ check_return_code () {
 
 	if [ "${EXPECTED}" != "${RESULT}" ]
 	then
-		echo "nsntrace ${*} did not return with exit code ${EXPECTED} (saw: ${RESULT})"
+		echo "Did not return with ${EXPECTED} (saw: ${RESULT})"
 		RET="1"
 	fi
 }
@@ -27,5 +27,7 @@ check_return_code 1 -u username-does-not-exist /bin/true
 check_return_code 1 -f "broken filter" /bin/true
 check_return_code 1 -o /path/does/not/exist /bin/true
 check_return_code 1 -d invalid_device /bin/true
+
+rm -rf *.pcap
 
 exit ${RET}
