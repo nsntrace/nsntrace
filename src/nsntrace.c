@@ -32,7 +32,7 @@
 /*
  * This application attempts to trace the network traffic of a single process.
  * It does so by creating a new network namespace. In Linux a network namespace
- * partitions the use of the network effecticly virtualizing the network,
+ * partitions the use of the network effectively virtualizing the network,
  * devices, addresses, ports, routes firewall rules, etc into separate boxes.
  *
  * So what this application does is use the clone syscall to create a new
@@ -86,7 +86,7 @@ static pid_t child_pid;
 
 /*
  * We will attempt to catch the signals that can make us exit since
- * we want to remove the temporary network configurations when we elave
+ * we want to remove the temporary network configurations when we leave
  *
  * This is hard. Which signals should we catch? This is what we have
  * now:
