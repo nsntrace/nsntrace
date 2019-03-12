@@ -98,8 +98,7 @@
       </varlistentry>
 
       <varlistentry>
-        <term><option>
-          --filter <replaceable>filter</replaceable></option></term>
+        <term><option>--filter <replaceable>filter</replaceable></option></term>
         <term><option>-f <replaceable>filter</replaceable></option></term>
 
         <listitem><para>
