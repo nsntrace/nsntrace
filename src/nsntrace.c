@@ -370,9 +370,12 @@ main(int argc, char **argv)
 	}
 
 	if (!nsntrace_net_ip_forward_enabled()) {
-		fprintf(stderr,
-			"IP forward must be enabled to run this application\n"
-			"# cat /proc/sys/net/ipv4/ip_forward\n");
+		fprintf(stderr, "Please enable IP forwarding:\n");
+		if( NULL == getenv("SUDO_UID") ) {
+			fprintf(stderr, "# sysctl net.ipv4.ip_forward=1\n");
+		} else {
+			fprintf(stderr, "$ sudo sysctl net.ipv4.ip_forward=1\n");
+		}
 		exit(EXIT_FAILURE);
 	}
 
