@@ -3,7 +3,7 @@
 
 This application uses Linux network namespaces to perform network traces of a single application. The traces are saved as pcap files. And can later be analyzed by for instance Wireshark.
 
-The nsntrace application is heavily inspired by the askbubuntu reply [here](http://askubuntu.com/a/499850).
+The nsntrace application is heavily inspired by the askbubuntu reply [here](https://askubuntu.com/a/499850).
 And uses the same approach only confined to a single C program.
 
 What the application does is use the clone syscall to create a new

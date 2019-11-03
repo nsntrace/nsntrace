@@ -10,7 +10,7 @@
  * for more details.
  *
  * You should have received a copy of the GNU General Public License along
- * with nsntraces; if not, see <http://www.gnu.org/licenses/>.
+ * with nsntraces; if not, see <https://www.gnu.org/licenses/>.
  */
 
 #ifndef _NSNTRACE_NET_H_
