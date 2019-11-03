@@ -12,8 +12,7 @@ check_return_code () {
 
 	RESULT="${?}"
 
-	if [ "${EXPECTED}" != "${RESULT}" ]
-	then
+	if [ "${EXPECTED}" != "${RESULT}" ] ; then
 		echo "Did not return with ${EXPECTED} (saw: ${RESULT})"
 		RET="1"
 	fi
