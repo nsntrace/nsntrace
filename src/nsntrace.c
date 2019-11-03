@@ -280,7 +280,7 @@ netns_main(void *arg) {
 		/* the tracee exited, we waited, stop capture */
 		nsntrace_capture_stop();
 
-		/* broken out of capture loop, clean up */
+		/* exited capture loop, clean up */
 		_nsntrace_cleanup_ns();
 		exit(ret);
 	} else { /* child - tracee */
