@@ -27,6 +27,6 @@ check_return_code 1 -f "broken filter" /bin/true
 check_return_code 1 -o /path/does/not/exist /bin/true
 check_return_code 1 -d invalid_device /bin/true
 
-rm -rf *.pcap
+rm -f -- *.pcap
 
 exit ${RET}

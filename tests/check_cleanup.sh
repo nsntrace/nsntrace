@@ -1,22 +1,21 @@
 #!/bin/sh
 
 # HUP INT QUIT ABRT SEGV TERM
-signals='1 2 3 6 11 15'
+set -- 1 2 3 6 11 15
 timeout=1
 ip="172.16.42.254"
 if=nsntrace
 
 check_cleanup() {
-    local pid="$1"
     # sleep to allow for cleanup after signal
     sleep 1
 
-    (sudo iptables -w -t nat -L | grep $ip) && {
+    (sudo iptables -w -t nat -L | grep "$ip") && {
         echo "Rules not cleaned up after signal $signal"
         exit 1
     }
 
-    (sudo ip link | grep $if) && {
+    (sudo ip link | grep "$if") && {
         echo "Link not cleaned up after signal $signal"
         exit 1
     }
@@ -26,22 +25,23 @@ check_cleanup() {
         exit 1
     }
 
-    rm -rf *.pcap
+    rm -f -- *.pcap
 }
 
 start_and_kill() {
-    local signal=$1
+    sig="$1"
 
     sudo ../src/nsntrace ./test_program_dummy.sh &
-    sleep $timeout
+    sleep "$timeout"
     pid=$(pidof nsntrace)
-    sudo kill -$signal $pid
+    sudo kill "-$sig" "$pid"
 
     check_cleanup "$pid"
+    unset sig
  }
 
-for signal in $signals; do
-    start_and_kill $signal
+for signal ; do
+    start_and_kill "$signal"
 done
 
 sudo ../src/nsntrace ./test_program_dummy_ends.sh

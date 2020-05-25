@@ -4,20 +4,22 @@ num_packets=10
 
 launch_nsntrace()
 {
-    local id="$1"
-    local filter="icmp[icmptype]==icmp-echo"
+    id="$1"
+    filter="icmp[icmptype]==icmp-echo"
 
-    sudo ../src/nsntrace  -f "$filter" --use-public-dns -o "$id.pcap" ping -c $num_packets google.com > /dev/null 2>&1 &
+    sudo ../src/nsntrace  -f "$filter" --use-public-dns -o "$id.pcap" ping -c "$num_packets" google.com > /dev/null 2>&1 &
     sleep 1.0e-3
+
+    unset id filter
 }
 
-for i in `seq 5`; do
+for i in $(seq 5); do
     launch_nsntrace "$i"
 done
 
 sleep 20
 
-for i in `seq 5`; do
+for i in $(seq 5); do
     captured=$(tshark -r "$i.pcap" | wc -l)
     [ "$captured" = "$num_packets" ] || {
         echo "failed to capture all packets"
@@ -25,5 +27,5 @@ for i in `seq 5`; do
     }
 done
 
-rm -f *.pcap
+rm -f -- *.pcap
 exit 0
