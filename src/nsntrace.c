@@ -63,6 +63,8 @@
 #define STACK_SIZE (1024 * 64) /* 64 kB stack */
 #define DEFAULT_OUTFILE "nsntrace.pcap"
 
+static FILE *where;
+
 struct nsntrace_options {
 	char *outfile;
 	char *device;
@@ -128,8 +130,8 @@ _nsntrace_cleanup_ns()
 	kill(child_pid, SIGTERM);
 	waitpid(child_pid, NULL, 0);
 
-	printf("Finished capturing %lu packets.\n",
-	       nsntrace_capture_packet_count());
+	fprintf(where, "Finished capturing %lu packets.\n",
+		nsntrace_capture_packet_count());
 	nsntrace_capture_flush();
 }
 
@@ -147,9 +149,6 @@ _nsntrace_cleanup() {
 	 * terminating signals. We need to clean up after
 	 * our children.
 	 */
-	printf("Capture interrupted, cleaning up\n");
-
-	/* wait for our children */
 	wait(NULL);
 }
 
@@ -160,14 +159,32 @@ _nsntrace_start_tracer(struct nsntrace_options *options)
 	const char *ip;
 	const char *interface;
 
+	/*
+	 * If outfile is a lone dash ("-"), the user wants us to output to STDOUT,
+	 * in that case we avoid printing anything else to STDOUT and use STDERR
+	 * instead.
+	 */
+	FILE *fp;
+	if (options->outfile[0] == '-' && options->outfile[1] == '\0') {
+		where = stderr;
+		fp = stdout;
+	} else {
+		where = stdout;
+		fp = fopen(options->outfile, "w");
+		if (!fp) {
+			perror("fopen");
+			exit(EXIT_FAILURE);
+		}
+	}
+
 	ip = nsntrace_net_get_capture_ip();
 	interface = nsntrace_net_get_capture_interface();
 
-	printf("Starting network trace of '%s' on interface %s.\n"
-	       "Your IP address in this trace is %s.\n"
-	       "Use ctrl-c to end at any time.\n\n",
-	       options->args[0], options->device, ip);
-	ret = nsntrace_capture_start(interface, options->filter, options->outfile);
+	fprintf(where, "Starting network trace of '%s' on interface %s.\n"
+		"Your IP address in this trace is %s.\n"
+		"Use ctrl-c to end at any time.\n\n",
+		options->args[0], options->device, ip);
+	ret = nsntrace_capture_start(interface, options->filter, fp);
 	if (ret != 0) {
 		exit(ret);
 	}
@@ -235,6 +252,14 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 		exit(EXIT_FAILURE);
 	}
 
+	/*
+	 * If outfile is a lone dash we output only PCAP data on STDOUT.
+	 * We use the dup2 syscall to redirect the tracee output to STDERR.
+	 */
+	if (options->outfile[0] == '-' && options->outfile[1] == '\0') {
+		dup2(STDERR_FILENO, STDOUT_FILENO);
+	}
+
 	/* launch the application to trace */
 	if (execvp(options->args[0], options->args) < 0) {
 		fprintf(stderr, "Unable to start '%s'\n", options->args[0]);
@@ -293,7 +318,7 @@ netns_main(void *arg) {
 static void
 _nsntrace_usage()
 {
-	printf("usage: nsntrace [options] program [arguments]\n"
+	fprintf(stderr, "usage: nsntrace [options] program [arguments]\n"
 	       "Perform network trace of a single process by using "
 	       "network namespaces.\n\n"
 	       "Options:\n"

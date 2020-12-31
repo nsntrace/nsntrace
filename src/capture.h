@@ -18,7 +18,7 @@
 
 int nsntrace_capture_start(const char *iface,
                            const char *filter,
-                           const char *outfile);
+                           FILE *fp);
 
 void nsntrace_capture_stop();
 
