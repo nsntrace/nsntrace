@@ -64,10 +64,10 @@ nsntrace_capture_stop()
 int
 nsntrace_capture_start(const char *iface,
 		       const char *filter,
-		       const char *outfile)
+		       FILE *fp)
 {
 	char errbuf[PCAP_ERRBUF_SIZE];
-	struct bpf_program fp;
+	struct bpf_program bpf_fp;
 	int ret;
 
 	if (!(handle = pcap_open_live(iface, BUFSIZ, 1, 1000, errbuf))) {
@@ -76,19 +76,18 @@ nsntrace_capture_start(const char *iface,
 	}
 
 	if (filter) {
-		ret = pcap_compile(handle, &fp, filter,
+		ret = pcap_compile(handle, &bpf_fp, filter,
 				   0, PCAP_NETMASK_UNKNOWN);
 		if (ret < 0) {
 			fprintf(stderr, "Failed to set filter: %s\n", filter);
 			return EXIT_FAILURE;
 		} else {
-			pcap_setfilter(handle, &fp);
+			pcap_setfilter(handle, &bpf_fp);
 		}
 	}
 
-	if (!(pcap_dumper = pcap_dump_open(handle, outfile))) {
-		fprintf(stderr, "Couldn't open output: %s: %s\n",
-			outfile, pcap_geterr(handle));
+	if (!(pcap_dumper = pcap_dump_fopen(handle, fp))) {
+		fprintf(stderr, "Couldn't open output: %s\n", pcap_geterr(handle));
 		return EXIT_FAILURE;
 	}
 
