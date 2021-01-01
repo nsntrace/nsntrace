@@ -117,7 +117,11 @@ nsntrace_capture_flush()
 char *
 nsntrace_capture_default_device()
 {
-	return pcap_lookupdev(NULL);
+	pcap_if_t *interfaces;
+	if (pcap_findalldevs(&interfaces, NULL) < 0) {
+		return NULL;
+	}
+	return interfaces->name;
 }
 
 int
