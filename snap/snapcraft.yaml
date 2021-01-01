@@ -1,0 +1,35 @@
+name: nsntrace
+adopt-info: nsntrace
+base: core20
+summary: Namespaced network tracer
+description: |
+  Perform network trace of a single process by using network namespaces.
+
+grade: stable
+confinement: classic
+
+parts:
+  nsntrace:
+    plugin: autotools
+    source-type: git
+    override-pull: | # This override tells snapcraft to use latest release tag
+      snapcraftctl pull
+      last_tag="$(git describe --tags --abbrev=0 --match 'v*')"
+      git fetch
+      git checkout "${last_tag}"
+      snapcraftctl set-version "${last_tag}"
+    source: https://github.com/nsntrace/nsntrace.git
+    build-packages:
+      - libpcap-dev
+      - libnl-route-3-dev
+      - xsltproc
+      - iptables
+      - pkg-config
+      - docbook-xsl
+      - docbook-xml
+    stage-packages:
+      - libpcap0.8
+
+apps:
+  nsntrace:
+    command: usr/local/bin/nsntrace
