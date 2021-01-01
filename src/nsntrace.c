@@ -14,14 +14,19 @@
  *
  */
 #define _GNU_SOURCE
+#include <errno.h>
+#include <fcntl.h>
 #include <grp.h>
 #include <getopt.h>
+#include <linux/limits.h>
 #include <sched.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mount.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
 #include <pwd.h>
@@ -62,6 +67,8 @@
 
 #define STACK_SIZE (1024 * 64) /* 64 kB stack */
 #define DEFAULT_OUTFILE "nsntrace.pcap"
+#define NETNS_RUN_DIR "/run/netns"
+#define PROC_SELF_NETNS_PATH "/proc/self/ns/net"
 
 static FILE *where;
 
@@ -124,11 +131,24 @@ _nsntrace_handle_signals(void (*handler)(int))
 	}
 }
 
+static void _nsntrace_remove_ns()
+{
+	char netns_path[PATH_MAX];
+
+	snprintf(netns_path, sizeof(netns_path), "%s/nsntrace-%d", NETNS_RUN_DIR, getpid());
+	umount2(netns_path, MNT_DETACH);
+	if (unlink(netns_path) < 0) {
+		perror("unlink");
+	}
+}
+
 static void
 _nsntrace_cleanup_ns()
 {
 	kill(child_pid, SIGTERM);
 	waitpid(child_pid, NULL, 0);
+
+	_nsntrace_remove_ns();
 
 	fprintf(where, "Finished capturing %lu packets.\n",
 		nsntrace_capture_packet_count());
@@ -150,6 +170,41 @@ _nsntrace_cleanup() {
 	 * our children.
 	 */
 	wait(NULL);
+}
+
+/*
+ * This will give the network namespace a name in the eyes of tools like
+ * ip-netns. We need to make sure we clean up after us, since a bind mount
+ * of /proc/<pid>/ns/net will keep the network namespace alive after the
+ * process exits.
+ */
+static void
+_nsntrace_set_name()
+{
+	char netns_path[PATH_MAX];
+	int fd;
+	int ret = 0;
+
+	/* Create the base netns directory if it doesn't exist */
+	if ((ret = mkdir(NETNS_RUN_DIR, S_IRWXU|S_IRGRP|S_IXGRP|S_IROTH|S_IXOTH)) < 0) {
+		if (errno != EEXIST) {
+			goto out;
+		}
+	}
+
+	snprintf(netns_path, PATH_MAX, "%s/nsntrace-%d", NETNS_RUN_DIR, getpid());
+	fd = open(netns_path, O_RDONLY|O_CREAT|O_EXCL, 0);
+	if (fd < 0) {
+		ret = fd;
+		goto out;
+	}
+	close(fd);
+
+	ret = mount(PROC_SELF_NETNS_PATH, netns_path, "none", MS_BIND, NULL);
+out:
+	if (ret < 0) {
+		fprintf(stderr, "failed to set namespace name\n");
+	}
 }
 
 static void
@@ -280,6 +335,8 @@ netns_main(void *arg) {
 
 	_nsntrace_handle_signals(_nsntrace_cleanup_ns_signal_callback);
 	_nsntrace_start_tracer(options);
+
+	_nsntrace_set_name();
 
 	child_pid = fork();
 	if (child_pid < 0) {
