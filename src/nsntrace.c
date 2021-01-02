@@ -422,7 +422,7 @@ main(int argc, char **argv)
 	if ((ret = nsntrace_net_init(pid, options.device)) < 0 ||
 			(ret = nsntrace_capture_check_device(options.device))) {
 		fprintf(stderr, "Failed to setup networking environment\n");
-		kill(pid, SIGTERM);
+		kill(pid, SIGKILL);
 		goto out;
 	}
 
