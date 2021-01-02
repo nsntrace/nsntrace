@@ -30,7 +30,7 @@ Another limitation is, that since we are using iptables and since
 we are tracing raw sockets. This application needs to be run as root.
 
 ## usage
-    > nsntrace
+    $ nsntrace
     usage: nsntrace [options] program [arguments]
     Perform network trace of a single process by using network namespaces.
 
@@ -41,7 +41,7 @@ we are tracing raw sockets. This application needs to be run as root.
     -u username run program as username/uid
 
 ## example
-    > sudo nsntrace -d eth1 wget www.google.com
+    $ sudo nsntrace -d eth1 wget www.google.com
     Starting network trace of 'wget' on interface eth1.
     Your IP address in this trace is 172.16.42.255.
     Use ctrl-c to end at any time.
@@ -58,7 +58,7 @@ we are tracing raw sockets. This application needs to be run as root.
 
     Finished capturing 42 packets.
 
-    > tshark -r nsntrace.pcap -Y 'http.response or http.request'
+    $ tshark -r nsntrace.pcap -Y 'http.response or http.request'
     16   0.998839 172.16.42.255 -> 195.249.146.104    HTTP 229 GET http://www.google.com/ HTTP/1.1
     20   1.010671    195.249.146.104 -> 172.16.42.255 HTTP 324 HTTP/1.1 302 Moved Temporarily  (text/html)
     22   1.010898 172.16.42.255 -> 195.249.146.104    HTTP 263 GET http://www.google.se/?gfe_rd=cr&ei=AbeIV5zZHcaq8wfTlrjgCA HTTP/1.1
