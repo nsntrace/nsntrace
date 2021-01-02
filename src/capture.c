@@ -58,7 +58,6 @@ void
 nsntrace_capture_stop()
 {
 	pcap_breakloop(handle);
-	pthread_join(capture_thread, NULL);
 }
 
 int
