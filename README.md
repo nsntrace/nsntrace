@@ -1,4 +1,4 @@
-#nsntrace
+# nsntrace
 > Perform network trace of a single process by using network namespaces.
 
 This application uses Linux network namespaces to perform network traces of a single application. The traces are saved as pcap files. And can later be analyzed by for instance Wireshark.
