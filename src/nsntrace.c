@@ -427,7 +427,7 @@ _nsntrace_parse_options(struct nsntrace_options *options,
 	}
 
 	if (!options->device) {
-		options->device = strdup(nsntrace_capture_default_device());
+		options->device = nsntrace_capture_default_device();
 	}
 	if (!options->outfile) {
 		options->outfile = strdup(DEFAULT_OUTFILE);
