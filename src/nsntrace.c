@@ -16,6 +16,7 @@
 #define _GNU_SOURCE
 #include <errno.h>
 #include <fcntl.h>
+#include <ftw.h>
 #include <grp.h>
 #include <getopt.h>
 #include <linux/limits.h>
@@ -75,15 +76,18 @@ static FILE *where;
 struct nsntrace_options {
 	char *outfile;
 	char *device;
+	int   use_public_dns;
 	char *user;
 	char *filter;
 	char * const *args;
 };
 
+#define PUBLIC_DNS 1000
 static const char *short_opt = "+o:d:u:f:h";
 static struct option long_opt[] = {
 	{ "outfile", required_argument, NULL, 'o' },
 	{ "device",  required_argument, NULL, 'd' },
+	{ "use-public-dns", no_argument, NULL, PUBLIC_DNS },
 	{ "user",    required_argument, NULL, 'u' },
 	{ "filter",  required_argument, NULL, 'f' },
 	{ "help",    required_argument, NULL, 'h' },
@@ -131,6 +135,17 @@ _nsntrace_handle_signals(void (*handler)(int))
 	}
 }
 
+static int _nsntrace_unlink_cb(const char *fpath,
+			       const struct stat *sb,
+			       int typeflag,
+			       struct FTW *ftwbuf)
+{
+    int rv = remove(fpath);
+    if (rv)
+        perror(fpath);
+    return rv;
+}
+
 static void _nsntrace_remove_ns()
 {
 	char netns_path[PATH_MAX];
@@ -140,6 +155,9 @@ static void _nsntrace_remove_ns()
 	if (unlink(netns_path) < 0) {
 		perror("unlink");
 	}
+
+	/* clean up run-time files */
+	nftw(NSNTRACE_RUN_DIR, _nsntrace_unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
 }
 
 static void
@@ -328,7 +346,7 @@ netns_main(void *arg) {
 	int ret = EXIT_SUCCESS;
 	struct nsntrace_options *options = (struct nsntrace_options *) arg;
 
-	if (nsntrace_net_ns_init() < 0) {
+	if (nsntrace_net_ns_init(options->use_public_dns) < 0) {
 		fprintf(stderr, "failed to setup network environment\n");
 		return EXIT_FAILURE;
 	}
@@ -379,10 +397,12 @@ _nsntrace_usage()
 	       "Perform network trace of a single process by using "
 	       "network namespaces.\n\n"
 	       "Options:\n"
-	       "-o file\t\tsend trace output to file (default nsntrace.pcap), use '-' for stdout\n"
-	       "-d device\tthe network device to trace\n"
-	       "-f filter\tan optional capture filter\n"
-	       "-u username\trun PROG as username/uid\n");
+	       "-o file\t\t\tsend trace output to file (default nsntrace.pcap), use '-' for stdout\n"
+	       "-d device\t\tthe network device to trace\n"
+	       "-f filter\t\tan optional capture filter\n"
+	       "-u username\t\trun PROG as username/uid\n"
+	       "--use-public-dns\toverride resolv.conf to use public nameservers from\n"
+	       "\t\t\tQuad9, Cloudflare, Google and OpenDNS\n");
 }
 
 static void
@@ -412,6 +432,10 @@ _nsntrace_parse_options(struct nsntrace_options *options,
 
 		case 'f':
 			options->filter = strdup(optarg);
+			break;
+
+		case PUBLIC_DNS:
+			options->use_public_dns = 1;
 			break;
 
 		case 'h':

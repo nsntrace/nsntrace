@@ -20,6 +20,11 @@ check_cleanup() {
         exit 1
     }
 
+    ls /run/nsntrace > /dev/null 2>&1 && {
+        echo "run-time files not cleaned up after signal $signal"
+        exit 1
+    }
+
     rm -rf *.pcap
 }
 

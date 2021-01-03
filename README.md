@@ -35,7 +35,10 @@ address is a loopback address (like 127.0.0.53) where that application
 listens for incoming DNS queries.
 
 This will not work for us in this network namespace environment, since
-we have our own namespaced loopback device.
+we have our own namespaced loopback device. To work around this one can use the
+`--use-public-dns` option to override resolv.conf in the namespace. Then nsntrace
+will use nameservers from Quad9 (9.9.9.9), Cloudflare (1.1.1.1), Google (8.8.8.8) and
+OpenDNS (208.67.222.222) to perform DNS queries.
 
 ## usage
     $ nsntrace
@@ -43,10 +46,12 @@ we have our own namespaced loopback device.
     Perform network trace of a single process by using network namespaces.
 
     Options:
-    -o file     send trace output to file (default nsntrace.pcap), use '-' for stdout
-    -d device   the network device to trace
-    -f filter   an optional capture filter
-    -u username run program as username/uid
+    -o file          	send trace output to file (default nsntrace.pcap)
+    -d device        	the network device to trace
+    -f filter        	an optional capture filter
+    -u username      	run program as username/uid
+    --use-public-dns	override resolv.conf to use public nameservers from
+                    	Quad9, Cloudflare, Google and OpenDNS
 
 ## example
 ```
