@@ -27,6 +27,7 @@
 #include <netlink/route/link/bonding.h>
 #include <netlink/route/link/veth.h>
 #include <netlink/route/route.h>
+#include <resolv.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -275,6 +276,46 @@ out:
 }
 
 /*
+ * Here we use the resolver(3) family of functions to iterate through the
+ * configured nameservers.
+ *
+ * On many systems today the nameserver functionality is handled by an
+ * application such as systemd-resolved or dnsmasq and the nameserver address
+ * is a loopback address (like 127.0.0.53) where that application listens for
+ * incoming DNS queries.
+ *
+ * This will not work for us in this network namespace environment, since
+ * we have our own namespaced loopback device.
+ */
+static void
+_nsntrace_net_check_dns()
+{
+	struct __res_state resolv_state = { 0, };
+
+	if (res_ninit(&resolv_state) < 0) {
+		return;
+	}
+
+	/* iterate configured nameservers */
+	for (int i = 0; i < MAXNS; i++) {
+		struct in_addr addr = resolv_state.nsaddr_list[i].sin_addr;
+		if (addr.s_addr == 0) {
+			continue;
+		}
+		/* s_addr is a 32 bit integer representing the ipv4 address */
+		unsigned char first = addr.s_addr & 0x000000FF;
+		if (first == 127)
+			continue;
+		return; /* non-loopback nameserver found */
+	}
+
+	/* we end up here if we did not find any non-loopback nameserver */
+	fprintf(stderr,
+		"Warning: only loopback (127.x.y.z) nameservers found.\n"
+		"This means we will probably not be able to resolve hostnames.\n\n");
+}
+
+/*
  * Set up the environment needed from the root network namespace point
  * of view. Create virtual ethernet interface (see above) and set our side
  * of it up and set address.
@@ -342,6 +383,7 @@ nsntrace_net_ns_init()
 		return EXIT_FAILURE;
 	}
 
+	_nsntrace_net_check_dns();
 
 	return ret;
 }
