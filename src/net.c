@@ -14,6 +14,8 @@
  *
  */
 
+#define _GNU_SOURCE
+#include <errno.h>
 #include <fcntl.h>
 #include <sys/socket.h>
 #include <linux/if.h>
@@ -28,11 +30,15 @@
 #include <netlink/route/link/veth.h>
 #include <netlink/route/route.h>
 #include <resolv.h>
+#include <sched.h>
 #include <sys/ioctl.h>
+#include <sys/mount.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include "cmd.h"
+#include "net.h"
 
 /*
  * Netlink is an IPC mechanism used between the kernel and user space
@@ -276,6 +282,76 @@ out:
 }
 
 /*
+ * This function will create a namespace local resolv.conf that will
+ * take precedence over the system-wide one. It uses the black magic
+ * of mount namespaces.
+ *
+ * It is a best-effort thing, so it will not return any error, but report
+ * when things go bad.
+ */
+static void
+_nsntrace_net_create_resolv_conf()
+{
+	int fd;
+	const char *resolv = "nameserver 9.9.9.9\n"         /* Quad9 */
+			     "nameserver 1.1.1.1\n"         /* Cloudflare */
+			     "nameserver 8.8.8.8\n"         /* Google */
+			     "nameserver 208.67.222.222\n"; /* OpenDNS */
+
+	if (mkdir(NSNTRACE_RUN_DIR, 0644) < 0) {
+		if (errno != EEXIST) {
+			perror("mkdir");
+			return;
+		}
+	}
+
+	char resolv_path[] = NSNTRACE_RUN_DIR "/resolv.confXXXXXX";
+	if ((fd = mkstemp(resolv_path)) < 0) {
+		perror("mkstemp");
+		return;
+	}
+
+	if (write(fd, resolv, strlen(resolv) + 1) < 0) {
+		perror("write");
+		close(fd);
+		return;
+	}
+
+	close(fd);
+
+	/*
+	 * Here we will get a bit tricky. In order to have our own nameservers
+	 * for our network namespace we will bind mount our own resolv.conf
+	 * over the system-wide one at /etc/resolv.conf.
+	 *
+	 * But we do not want to affect others outside this namespace. So we
+	 * enter a mount namespace (CLONE_NEWNS) before we do the bind mount. This,
+	 * however, is not enough. Before the bind mount we need to remount the
+	 * root partition with the MS_SLAVE and MS_REC flags to make sure our
+	 * changes are not propagated to the outside mount namespace. As some
+	 * systems have that as the default behavior.
+	 */
+
+	/* enter new mount namespace */
+	if (unshare(CLONE_NEWNS) < 0) {
+		perror("unshare");
+		return;
+	}
+
+	/* remount root to avoid propagating changes to subtrees */
+	if (mount("", "/", "none", MS_SLAVE | MS_REC, NULL)) {
+		perror("mount");
+		return;
+	}
+
+	/* bind mount our resolv.conf over system-wide */
+	if (mount(resolv_path, "/etc/resolv.conf", "none", MS_BIND, NULL) < 0) {
+		perror("mount");
+		return;
+	}
+}
+
+/*
  * Here we use the resolver(3) family of functions to iterate through the
  * configured nameservers.
  *
@@ -312,7 +388,9 @@ _nsntrace_net_check_dns()
 	/* we end up here if we did not find any non-loopback nameserver */
 	fprintf(stderr,
 		"Warning: only loopback (127.x.y.z) nameservers found.\n"
-		"This means we will probably not be able to resolve hostnames.\n\n");
+		"This means we will probably not be able to resolve hostnames.\n"
+		"Consider passing --use-public-dns to use public nameservers from\n"
+		"Quad9, Cloudflare, Google and OpenDNS\n\n");
 }
 
 /*
@@ -371,7 +449,7 @@ nsntrace_net_deinit(const char *device)
  * Set up the namespaced net infrastructure needed.
  */
 int
-nsntrace_net_ns_init()
+nsntrace_net_ns_init(int use_public_dns)
 {
 	int ret = 0;
 
@@ -383,7 +461,11 @@ nsntrace_net_ns_init()
 		return EXIT_FAILURE;
 	}
 
-	_nsntrace_net_check_dns();
+	if (!use_public_dns) {
+		_nsntrace_net_check_dns();
+	} else {
+		_nsntrace_net_create_resolv_conf();
+	}
 
 	return ret;
 }

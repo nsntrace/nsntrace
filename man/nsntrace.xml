@@ -77,6 +77,16 @@
         </para></listitem>
       </varlistentry>
 
+
+      <varlistentry>
+        <term><option>--use-public-dns</option></term>
+        <listitem><para>
+          Override resolv.conf in namespace to use public nameservers from
+          Quad9 (9.9.9.9), Cloudflare (1.1.1.1), Google (8.8.8.8) and
+          OpenDNS (208.67.222.222).
+        </para></listitem>
+      </varlistentry>
+
       <varlistentry>
         <term><option>--outfile <replaceable>file</replaceable></option></term>
         <term><option>-o <replaceable>file</replaceable></option></term>

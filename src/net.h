@@ -16,12 +16,14 @@
 #ifndef _NSNTRACE_NET_H_
 #define _NSNTRACE_NET_H
 
+#define NSNTRACE_RUN_DIR "/run/nsntrace"
+
 int nsntrace_net_init(pid_t ns_pid,
                       const char *device);
 
 int nsntrace_net_deinit(const char *device);
 
-int nsntrace_net_ns_init();
+int nsntrace_net_ns_init(int use_public_dns);
 
 int nsntrace_net_ip_forward_enabled();
 
