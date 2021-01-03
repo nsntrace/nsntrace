@@ -13,6 +13,7 @@
  * with nsntraces; if not, see <https://www.gnu.org/licenses/>.
  */
 
+#include <linux/if.h>
 #include <pcap.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -116,10 +117,16 @@ char *
 nsntrace_capture_default_device()
 {
 	pcap_if_t *interfaces;
+	char *name;
+
 	if (pcap_findalldevs(&interfaces, NULL) < 0) {
 		return NULL;
 	}
-	return interfaces->name;
+
+	name = strndup(interfaces->name, IFNAMSIZ);
+	pcap_freealldevs(interfaces);
+
+	return name;
 }
 
 int
@@ -127,6 +134,7 @@ nsntrace_capture_check_device(char *iface)
 {
 	pcap_if_t *dev;
 	pcap_if_t *devList;
+	int ret = EXIT_FAILURE;
 
 	char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -137,11 +145,13 @@ nsntrace_capture_check_device(char *iface)
 
 	for (dev = devList; dev != NULL; dev = dev->next) {
 		if (strcmp(dev->name, iface) == 0) {
-			return EXIT_SUCCESS;
+			ret = EXIT_SUCCESS;
+			goto out;
 		}
 	}
 
 	fprintf(stderr, "Unknown interface: %s\n", iface);
-
-	return EXIT_FAILURE;
+out:
+	pcap_freealldevs(devList);
+	return ret;
 }
