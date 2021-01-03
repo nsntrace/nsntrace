@@ -379,7 +379,7 @@ _nsntrace_usage()
 	       "Perform network trace of a single process by using "
 	       "network namespaces.\n\n"
 	       "Options:\n"
-	       "-o file\t\tsend trace output to file (default nsntrace.pcap)\n"
+	       "-o file\t\tsend trace output to file (default nsntrace.pcap), use '-' for stdout\n"
 	       "-d device\tthe network device to trace\n"
 	       "-f filter\tan optional capture filter\n"
 	       "-u username\trun PROG as username/uid\n");

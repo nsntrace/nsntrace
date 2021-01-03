@@ -83,7 +83,7 @@
 
         <listitem><para>
           Write the trace output to the file <replaceable>file</replaceable>.
-          Default is nsntrace.pcap.
+          Default is nsntrace.pcap. Use '-' for stdout.
         </para></listitem>
       </varlistentry>
 
