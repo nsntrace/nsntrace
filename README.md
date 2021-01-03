@@ -29,6 +29,14 @@ ip address will be the NAT one of the virtual device.
 Another limitation is, that since we are using iptables and since
 we are tracing raw sockets. This application needs to be run as root.
 
+On many systems today the nameserver functionality is handled by an
+application such as systemd-resolved or dnsmasq and the nameserver
+address is a loopback address (like 127.0.0.53) where that application
+listens for incoming DNS queries.
+
+This will not work for us in this network namespace environment, since
+we have our own namespaced loopback device.
+
 ## usage
     $ nsntrace
     usage: nsntrace [options] program [arguments]
