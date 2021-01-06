@@ -146,6 +146,15 @@ static int _nsntrace_unlink_cb(const char *fpath,
     return rv;
 }
 
+static void
+_nsntrace_remove_rundir(pid_t pid)
+{
+	char path[PATH_MAX] = { 0, };
+
+	snprintf(path, PATH_MAX, "%s/%d", NSNTRACE_RUN_DIR, getppid());
+	nftw(path, _nsntrace_unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
+}
+
 static void _nsntrace_remove_ns()
 {
 	char netns_path[PATH_MAX];
@@ -157,7 +166,7 @@ static void _nsntrace_remove_ns()
 	}
 
 	/* clean up run-time files */
-	nftw(NSNTRACE_RUN_DIR, _nsntrace_unlink_cb, 64, FTW_DEPTH | FTW_PHYS);
+	_nsntrace_remove_rundir(getppid());
 }
 
 static void
@@ -463,6 +472,29 @@ _nsntrace_parse_options(struct nsntrace_options *options,
 	}
 }
 
+/*
+ * Create the pid based run dir for this nsntrace instance.
+ * This is for storing run-time files and to be able to cleanup
+ * easily without removing other nsntrace instances files.
+ */
+static void
+_nsntrace_mkrundir()
+{
+	char path[PATH_MAX] = { 0, };
+
+	if (mkdir(NSNTRACE_RUN_DIR, 0644) < 0) {
+		if (errno != EEXIST) {
+			perror("mkdir");
+		}
+	}
+	snprintf(path, PATH_MAX, "%s/%d", NSNTRACE_RUN_DIR, getpid());
+	if (mkdir(path, 0644) < 0) {
+		if (errno != EEXIST) {
+			perror("mkdir");
+		}
+	}
+}
+
 int
 main(int argc, char **argv)
 {
@@ -490,12 +522,15 @@ main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
+	_nsntrace_mkrundir();
+
 	/* here we create a new process in a new network namespace */
 	pid = clone(netns_main, child_stack + STACK_SIZE,
 		    CLONE_NEWNET | SIGCHLD, &options);
 	if (pid < 0) {
-		fprintf(stderr, "clone failed\n");
-		exit(EXIT_FAILURE);
+		perror("clone");
+		ret = EXIT_FAILURE;
+		goto out;
 	}
 
 	_nsntrace_handle_signals(_nsntrace_cleanup);
@@ -517,5 +552,6 @@ main(int argc, char **argv)
 
 out:
 	nsntrace_net_deinit(options.device);
+	_nsntrace_remove_rundir(getpid());
 	return ret;
 }
