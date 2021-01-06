@@ -7,6 +7,7 @@ ip="172.16.42.254"
 if=nsntrace
 
 check_cleanup() {
+    local pid="$1"
     # sleep to allow for cleanup after signal
     sleep 1
 
@@ -20,7 +21,7 @@ check_cleanup() {
         exit 1
     }
 
-    ls /run/nsntrace > /dev/null 2>&1 && {
+    ls "/run/nsntrace/$1" > /dev/null 2>&1 && {
         echo "run-time files not cleaned up after signal $signal"
         exit 1
     }
@@ -36,11 +37,14 @@ start_and_kill() {
     pid=$(pidof nsntrace)
     sudo kill -$signal $pid
 
-    check_cleanup
+    check_cleanup "$pid"
  }
 
 for signal in $signals; do
     start_and_kill $signal
 done
+
+sudo ../src/nsntrace ./test_program_dummy_ends.sh
+check_cleanup "$!"
 
 exit 0

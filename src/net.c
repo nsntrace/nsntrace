@@ -293,19 +293,15 @@ static void
 _nsntrace_net_create_resolv_conf()
 {
 	int fd;
+	char resolv_path[PATH_MAX] = { 0, };
 	const char *resolv = "nameserver 9.9.9.9\n"         /* Quad9 */
 			     "nameserver 1.1.1.1\n"         /* Cloudflare */
 			     "nameserver 8.8.8.8\n"         /* Google */
 			     "nameserver 208.67.222.222\n"; /* OpenDNS */
 
-	if (mkdir(NSNTRACE_RUN_DIR, 0644) < 0) {
-		if (errno != EEXIST) {
-			perror("mkdir");
-			return;
-		}
-	}
 
-	char resolv_path[] = NSNTRACE_RUN_DIR "/resolv.confXXXXXX";
+	snprintf(resolv_path, PATH_MAX, "%s/%d/resolv.confXXXXXX",
+		 NSNTRACE_RUN_DIR, getppid());
 	if ((fd = mkstemp(resolv_path)) < 0) {
 		perror("mkstemp");
 		return;
