@@ -82,6 +82,11 @@ struct nsntrace_options {
 	char * const *args;
 };
 
+struct nsntrace_common {
+	struct nsntrace_options *options;
+	struct nsntrace_if_info if_info;
+};
+
 #define PUBLIC_DNS 1000
 static const char *short_opt = "+o:d:u:f:h";
 static struct option long_opt[] = {
@@ -235,12 +240,10 @@ out:
 }
 
 static void
-_nsntrace_start_tracer(struct nsntrace_options *options)
+_nsntrace_start_tracer(struct nsntrace_options *options,
+					   struct nsntrace_if_info *info)
 {
 	int ret;
-	const char *ip;
-	const char *interface;
-
 	/*
 	 * If outfile is a lone dash ("-"), the user wants us to output to STDOUT,
 	 * in that case we avoid printing anything else to STDOUT and use STDERR
@@ -259,14 +262,11 @@ _nsntrace_start_tracer(struct nsntrace_options *options)
 		}
 	}
 
-	ip = nsntrace_net_get_capture_ip();
-	interface = nsntrace_net_get_capture_interface();
-
 	fprintf(where, "Starting network trace of '%s' on interface %s.\n"
 		"Your IP address in this trace is %s.\n"
 		"Use ctrl-c to end at any time.\n\n",
-		options->args[0], options->device, ip);
-	ret = nsntrace_capture_start(interface, options->filter, fp);
+		options->args[0], options->device, info->ns_ip);
+	ret = nsntrace_capture_start(info->ns_if, options->filter, fp);
 	if (ret != 0) {
 		exit(ret);
 	}
@@ -353,15 +353,16 @@ static int
 netns_main(void *arg) {
 	int status;
 	int ret = EXIT_SUCCESS;
-	struct nsntrace_options *options = (struct nsntrace_options *) arg;
+	struct nsntrace_common *common = (struct nsntrace_common *) arg;
+	struct nsntrace_options *options = common->options;
 
-	if (nsntrace_net_ns_init(options->use_public_dns) < 0) {
+	if (nsntrace_net_ns_init(options->use_public_dns, &common->if_info) < 0) {
 		fprintf(stderr, "failed to setup network environment\n");
 		return EXIT_FAILURE;
 	}
 
 	_nsntrace_handle_signals(_nsntrace_cleanup_ns_signal_callback);
-	_nsntrace_start_tracer(options);
+	_nsntrace_start_tracer(common->options, &common->if_info);
 
 	_nsntrace_set_name();
 
@@ -393,7 +394,7 @@ netns_main(void *arg) {
 		_nsntrace_cleanup_ns();
 		exit(ret);
 	} else { /* child - tracee */
-		_nsntrace_start_tracee(options);
+		_nsntrace_start_tracee(common->options);
 	}
 
 	return ret;
@@ -499,7 +500,8 @@ int
 main(int argc, char **argv)
 {
 	struct nsntrace_options options = { 0 };
-	pid_t pid;
+	struct nsntrace_common common = { &options,  };
+	pid_t pid = 0;
 	int status;
 	int ret = EXIT_SUCCESS;
 
@@ -524,9 +526,14 @@ main(int argc, char **argv)
 
 	_nsntrace_mkrundir();
 
+	if (nsntrace_net_get_if_info(getpid(), &common.if_info) < 0) {
+		ret = EXIT_FAILURE;
+		goto out;
+	}
+
 	/* here we create a new process in a new network namespace */
 	pid = clone(netns_main, child_stack + STACK_SIZE,
-		    CLONE_NEWNET | SIGCHLD, &options);
+		    CLONE_NEWNET | SIGCHLD, &common);
 	if (pid < 0) {
 		perror("clone");
 		ret = EXIT_FAILURE;
@@ -535,8 +542,8 @@ main(int argc, char **argv)
 
 	_nsntrace_handle_signals(_nsntrace_cleanup);
 
-	if ((ret = nsntrace_net_init(pid, options.device)) < 0 ||
-			(ret = nsntrace_capture_check_device(options.device))) {
+	if ((ret = nsntrace_net_init(pid, options.device, &common.if_info)) < 0 ||
+	    (ret = nsntrace_capture_check_device(options.device))) {
 		fprintf(stderr, "Failed to setup networking environment\n");
 		kill(pid, SIGKILL);
 		goto out;
@@ -551,7 +558,9 @@ main(int argc, char **argv)
 	}
 
 out:
-	nsntrace_net_deinit(options.device);
+	if (pid != 0) {
+		nsntrace_net_deinit(pid, options.device, &common.if_info);
+	}
 	_nsntrace_remove_rundir(getpid());
 	return ret;
 }
