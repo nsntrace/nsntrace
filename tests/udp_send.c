@@ -11,14 +11,18 @@
 int main(int argc, char **argv)
 {
 	struct sockaddr_in addr = { 0 };
-	int port, num, s;
+	int port, num, s, interval = 0;
 
-	if (argc != 3) {
-		fprintf(stderr, "usage: udp_send port num_packets\n");
+	if (argc < 3) {
+		fprintf(stderr, "usage: udp_send port num_packets [interval]\n");
 		exit(EXIT_FAILURE);
 	}
 	port = atoi(argv[1]);
 	num = atoi(argv[2]);
+
+	if (argc > 3) {
+		interval = atoi(argv[3]);
+	}
 
 	if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
 		fprintf(stderr, "failed to create socket\n");
@@ -39,6 +43,8 @@ int main(int argc, char **argv)
 			fprintf(stderr, "failed to send message\n");
 			exit(EXIT_FAILURE);
 		}
+
+		sleep(interval);
 	}
 
 	return 0;

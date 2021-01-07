@@ -55,15 +55,10 @@
  * to interface with the Netlink API and perform network configuration.
  */
 
-#define IP_BASE "172.16.42"
-#define NS_IP IP_BASE ".255"
-#define GW_IP IP_BASE ".254"
-#define NS_IP_RANGE NS_IP "/31"
-#define GW_IP_RANGE GW_IP "/31"
+#define NS_IF_BASE "nscap"
+#define GW_IF_BASE "nsgw"
 
-#define IF_BASE "nsntrace"
-#define NS_IF IF_BASE "-netns"
-#define GW_IF IF_BASE
+
 
 static struct nl_sock *
 _nsntrace_net_get_nl_socket() {
@@ -390,6 +385,81 @@ _nsntrace_net_check_dns()
 }
 
 /*
+ * Attempt to find a free ip base (172.19.x) to use. We use randomization
+ * and check addresses that are already bound to our devices, this is to
+ * enable us to run multiple instances of nsntrace.
+ */
+static const char *
+_nsntrace_net_get_ip_base()
+{
+	char buf[1024];
+	char ip[16];
+	struct ifconf ifc;
+	struct timeval tval;
+	int s;
+	int i;
+
+	s = socket(AF_INET, SOCK_DGRAM, 0);
+	if(s < 0) {
+		perror("socket");
+		return NULL;
+	}
+
+	gettimeofday(&tval, NULL);
+	srand(tval.tv_usec);
+	while (1) {
+		int digit = rand() % 255;
+		snprintf(ip, 16, "172.19.%d", digit);
+
+		/* query available interfaces. */
+		ifc.ifc_len = sizeof(buf);
+		ifc.ifc_buf = buf;
+		if(ioctl(s, SIOCGIFCONF, &ifc) < 0)
+		{
+			perror("ioctl");
+			return NULL;
+		}
+
+		/* iterate through the list of interfaces. */
+		int found = 0;
+		for(i = 0; i < (ifc.ifc_len / sizeof(struct ifreq)); i++)
+		{
+			struct ifreq *item = &ifc.ifc_req[i];
+			char *addr = inet_ntoa(((struct sockaddr_in *)&item->ifr_addr)->sin_addr);
+
+			if (!strncmp(addr, ip, strlen(ip))) {
+				found = 1;
+				break;
+			}
+		}
+		if (found == 0) {
+			return strdup(ip);
+		}
+	}
+	return NULL;
+}
+
+int
+nsntrace_net_get_if_info(pid_t pid,
+			 struct nsntrace_if_info *info)
+{
+	const char *ip_base = _nsntrace_net_get_ip_base();
+	if (!ip_base) {
+		fprintf(stderr, "failed to allocate IP address");
+		return -1;
+	}
+
+	snprintf(info->ns_if, IFNAMSIZ, "%s%d", NS_IF_BASE, pid);
+	snprintf(info->gw_if, IFNAMSIZ, "%s%d", GW_IF_BASE, pid);
+	snprintf(info->ns_ip, IP_ADDR_LEN, "%s.255", ip_base);
+	snprintf(info->gw_ip, IP_ADDR_LEN, "%s.254", ip_base);
+	snprintf(info->ns_ip_range, IP_ADDR_LEN + 3, "%s/31", info->ns_ip);
+	snprintf(info->gw_ip_range, IP_ADDR_LEN + 3, "%s/31", info->gw_ip);
+
+	return 0;
+}
+
+/*
  * Set up the environment needed from the root network namespace point
  * of view. Create virtual ethernet interface (see above) and set our side
  * of it up and set address.
@@ -398,19 +468,20 @@ _nsntrace_net_check_dns()
  */
 int
 nsntrace_net_init(pid_t ns_pid,
-		  const char *device)
+		  const char *device,
+		  struct nsntrace_if_info *info)
 {
 	int ret = 0;
 
-	if ((ret = _nsntrace_net_create_veth(GW_IF, NS_IF, ns_pid)) < 0) {
+	if ((ret = _nsntrace_net_create_veth(info->gw_if, info->ns_if, ns_pid)) < 0) {
 		return ret;
 	}
 
-	if ((ret = _nsntrace_net_iface_up(GW_IF, GW_IP_RANGE, NULL)) < 0) {
+	if ((ret = _nsntrace_net_iface_up(info->gw_if, info->gw_ip_range, NULL)) < 0) {
 		return ret;
 	}
 
-	if ((ret = _nsntrace_net_set_nat(GW_IP_RANGE, GW_IF, device, 1)) < 0) {
+	if ((ret = _nsntrace_net_set_nat(info->gw_ip_range, info->gw_if, device, 1)) < 0) {
 		return ret;
 	}
 
@@ -422,19 +493,21 @@ nsntrace_net_init(pid_t ns_pid,
  * Teardown the temporary network trickery we created in init.
  */
 int
-nsntrace_net_deinit(const char *device)
+nsntrace_net_deinit(pid_t ns_pid,
+		    const char *device,
+		    struct nsntrace_if_info *info)
 {
 	int ret = 0;
 
-	if ((ret = _nsntrace_net_set_nat(GW_IP_RANGE, GW_IF, device, 0)) < 0) {
+	if ((ret = _nsntrace_net_set_nat(info->gw_ip_range, info->gw_if, device, 0)) < 0) {
 		return ret;
 	}
 
-	if ((ret = _nsntrace_net_iface_delete(NS_IF)) < 0) {
+	if ((ret = _nsntrace_net_iface_delete(info->ns_if)) < 0) {
 		return ret;
 	}
 
-	if ((ret = _nsntrace_net_iface_delete(GW_IF)) < 0) {
+	if ((ret = _nsntrace_net_iface_delete(info->gw_if)) < 0) {
 		return ret;
 	}
 
@@ -445,11 +518,12 @@ nsntrace_net_deinit(const char *device)
  * Set up the namespaced net infrastructure needed.
  */
 int
-nsntrace_net_ns_init(int use_public_dns)
+nsntrace_net_ns_init(int use_public_dns,
+		     struct nsntrace_if_info *info)
 {
 	int ret = 0;
 
-	if ((ret = _nsntrace_net_iface_up(NS_IF, NS_IP_RANGE, GW_IP)) < 0) {
+	if ((ret = _nsntrace_net_iface_up(info->ns_if, info->ns_ip_range, info->gw_ip)) < 0) {
 		return EXIT_FAILURE;
 	}
 
@@ -486,16 +560,4 @@ nsntrace_net_ip_forward_enabled()
 	}
 
 	return ch == '1';
-}
-
-const char *
-nsntrace_net_get_capture_interface()
-{
-	return NS_IF;
-}
-
-const char *
-nsntrace_net_get_capture_ip()
-{
-	return NS_IP;
 }
