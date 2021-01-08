@@ -98,3 +98,27 @@ $ sudo nsntrace -f tcp -o - wget www.google.com  2> /dev/null | tshark -r -
 13   0.113167 142.250.74.36 → 172.16.42.255 TCP 66 80 → 51088 [FIN, ACK] Seq=13815 Ack=143 Win=66816 Len=0 TSval=2846449554 TSecr=1362504583
 14   0.113190 172.16.42.255 → 142.250.74.36 TCP 66 51088 → 80 [ACK] Seq=143 Ack=13816 Win=64128 Len=0 TSval=1362504595 TSecr=2846449554
 ```
+
+# building from source
+To build nsntrace from source the following steps are needed:
+
+```
+$ ./autogen.sh
+$ ./configure
+$ make
+```
+And to install:
+```
+$ sudo make install
+```
+
+## dependencies
+The packages needed to build nsntrace are (Debian/Ubuntu style naming):
+* automake
+* docbook-xml
+* docbook-xsl
+* iptables
+* libnl-route-3-dev
+* lippcap-dev
+* pkg-config
+* xsltproc
