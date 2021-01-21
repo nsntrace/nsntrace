@@ -1,44 +1,25 @@
+
 # nsntrace
 > Perform network trace of a single process by using network namespaces.
 
-This application uses Linux network namespaces to perform network traces of a single application. The traces are saved as pcap files. And can later be analyzed by for instance Wireshark.
+This application uses Linux network namespaces to perform a network trace of a single application. The trace is saved as a pcap file. And can later be analyzed by for instance Wireshark or tshark.
 
 The nsntrace application is heavily inspired by the askbubuntu reply [here](https://askubuntu.com/a/499850).
 And uses the same approach only confined to a single C program.
 
-What the application does is use the clone syscall to create a new
-network namespace (CLONE_NEWNET) and from that namespace launch the
-requested process as well as start a trace using libpcap. This will ensure that all
-the packets we trace come from the process.
+What the application does is use the clone syscall to create a new network namespace (CLONE_NEWNET) and from that namespace launch the requested process as well as start a trace using libpcap. This will ensure that all the packets we trace come from the process.
 
-The problem we are left with is that the process is isolated in the
-namespace and cannot reach any other network. We get around that by
-creating virtual network interfaces. We keep one of them in the
-root network namespace and but the other one in the newly created one where
-our tracing takes place. We set the root namespaced one as the default gw
-of the trace namespaced virtual device.
+The problem we are left with is that the process is isolated in the namespace and cannot reach any other network. We get around that by creating virtual network interfaces. We keep one of them in the root network namespace and but the other one in the newly created one where our tracing takes place. We set the root namespaced one as the default gateway of the trace namespaced virtual device.
 
-And then to make sure we can reach our indented net, we use ip
-tables and NAT to forward all traffic from the virtual device to our
-default network interface.
+And then to make sure we can reach our intended net, we use iptables and NAT to forward all traffic from the virtual device to our default network interface.
 
-This will allow us to capture the packets from a single process while
-it is communicating with our default network. A limitation is that our
-ip address will be the NAT one of the virtual device.
+This will allow us to capture the packets from a single process while it is communicating with our default network. A limitation is that our ip address will be the NAT one of the virtual device.
 
-Another limitation is, that since we are using iptables and since
-we are tracing raw sockets. This application needs to be run as root.
+Another limitation is, that since we are using iptables and since we are tracing raw sockets. This application needs to be run as root.
 
-On many systems today the nameserver functionality is handled by an
-application such as systemd-resolved or dnsmasq and the nameserver
-address is a loopback address (like 127.0.0.53) where that application
-listens for incoming DNS queries.
+On many systems today the nameserver functionality is handled by an application such as systemd-resolved or dnsmasq and the nameserver address is a loopback address (like 127.0.0.53) where that application listens for incoming DNS queries.
 
-This will not work for us in this network namespace environment, since
-we have our own namespaced loopback device. To work around this one can use the
-`--use-public-dns` option to override resolv.conf in the namespace. Then nsntrace
-will use nameservers from Quad9 (9.9.9.9), Cloudflare (1.1.1.1), Google (8.8.8.8) and
-OpenDNS (208.67.222.222) to perform DNS queries.
+This will not work for us in this network namespace environment, since we have our own namespaced loopback device. To work around this one can use the `--use-public-dns` option to override resolv.conf in the namespace. Then nsntrace will use nameservers from Quad9 (9.9.9.9), Cloudflare (1.1.1.1), Google (8.8.8.8) and OpenDNS (208.67.222.222) to perform DNS queries.
 
 ## usage
     $ nsntrace
