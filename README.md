@@ -84,6 +84,7 @@ $ sudo nsntrace -f tcp -o - wget www.google.com  2> /dev/null | tshark -r -
 To build nsntrace from source the following steps are needed:
 
 ```
+$ sudo bash install_deps.sh
 $ ./autogen.sh
 $ ./configure
 $ make
