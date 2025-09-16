@@ -188,14 +188,14 @@ _nsntrace_cleanup_ns()
 }
 
 static void
-_nsntrace_cleanup_ns_signal_callback()
+_nsntrace_cleanup_ns_signal_callback(int sig)
 {
 	_nsntrace_cleanup_ns();
 	exit(EXIT_SUCCESS);
 }
 
 static void
-_nsntrace_cleanup() {
+_nsntrace_cleanup(int sig) {
 	/*
 	 * Make sure we do not just die when we receive our
 	 * terminating signals. We need to clean up after
