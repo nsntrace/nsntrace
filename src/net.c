@@ -302,6 +302,20 @@ _nsntrace_net_create_resolv_conf()
 		return;
 	}
 
+	/*
+	 * mkstemp(3) creates the file 0600, owned by us, root. We are about
+	 * to bind mount it over /etc/resolv.conf, and with -u/--user we drop
+	 * privileges before exec'ing the traced program, which would then be
+	 * unable to read its own resolver configuration and fail every name
+	 * lookup. The file contains nothing but four public nameserver
+	 * addresses, so make it world readable.
+	 */
+	if (fchmod(fd, 0644) < 0) {
+		perror("fchmod");
+		close(fd);
+		return;
+	}
+
 	if (write(fd, resolv, strlen(resolv) + 1) < 0) {
 		perror("write");
 		close(fd);
