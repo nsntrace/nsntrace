@@ -12,9 +12,10 @@ int main(int argc, char **argv)
 {
 	struct sockaddr_in addr = { 0 };
 	int port, num, s, interval = 0;
+	const char *dest = "127.0.0.1";
 
 	if (argc < 3) {
-		fprintf(stderr, "usage: udp_send port num_packets [interval]\n");
+		fprintf(stderr, "usage: udp_send port num_packets [interval] [dest]\n");
 		exit(EXIT_FAILURE);
 	}
 	port = atoi(argv[1]);
@@ -22,6 +23,9 @@ int main(int argc, char **argv)
 
 	if (argc > 3) {
 		interval = atoi(argv[3]);
+	}
+	if (argc > 4) {
+		dest = argv[4];
 	}
 
 	if ((s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) < 0) {
@@ -31,7 +35,7 @@ int main(int argc, char **argv)
 
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
-	inet_aton("127.0.0.1", &addr.sin_addr);
+	inet_aton(dest, &addr.sin_addr);
 
 	while(num--) {
 		char *message = "if not now, when?";

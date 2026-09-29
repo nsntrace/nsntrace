@@ -9,4 +9,4 @@ udp_send: udp_send.c
 	$(CC) $^ -o $@
 
 CLEANFILES = udp_send
-EXTRA_DIST = $(TESTS) test_program_dummy.sh udp_send.c
+EXTRA_DIST = $(TESTS) test_program_dummy.sh udp_send.c udp_send_to_gw.sh
