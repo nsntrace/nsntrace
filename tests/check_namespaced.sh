@@ -11,7 +11,7 @@ pidof_udp_send=$(pidof udp_send)
 trap 'kill "$pidof_udp_send"' EXIT
 
 # make sure we only capture the packets from the namespaced version
-sudo ../src/nsntrace -d lo -f "$filter" ./udp_send 1337 "$packets" | grep "$packets packets" || {
+sudo ../src/nsntrace -d lo -f "$filter" ./udp_send_to_gw.sh "$packets" | grep "$packets packets" || {
     echo "Did not capture $packets packets!"
     exit 1
 }
