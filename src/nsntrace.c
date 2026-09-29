@@ -85,6 +85,8 @@ struct nsntrace_options {
 struct nsntrace_common {
 	struct nsntrace_options *options;
 	struct nsntrace_if_info if_info;
+	/* Veth-setup handshake: see _nsntrace_wait_for_veth(). */
+	int sync_pipe[2];
 };
 
 #define PUBLIC_DNS 1000
@@ -101,6 +103,8 @@ static struct option long_opt[] = {
 
 static char child_stack[STACK_SIZE];
 static pid_t child_pid;
+/* Write end of sync_pipe, or -1; see _nsntrace_cleanup(). */
+static int sync_pipe_write_fd = -1;
 
 /*
  * We will attempt to catch the signals that can make us exit since
@@ -201,6 +205,16 @@ _nsntrace_cleanup(int sig) {
 	 * terminating signals. We need to clean up after
 	 * our children.
 	 */
+
+	/* If the child is still waiting on sync_pipe, wait() below would
+	 * otherwise deadlock: a zero byte tells it to abort, the same as
+	 * an explicit failure, without touching the fd main() still owns.
+	 * write() is async-signal-safe. */
+	if (sync_pipe_write_fd >= 0) {
+		char byte = 0;
+		write(sync_pipe_write_fd, &byte, sizeof(byte));
+	}
+
 	wait(NULL);
 }
 
@@ -349,12 +363,42 @@ _nsntrace_start_tracee(struct nsntrace_options *options)
 	}
 }
 
+/*
+ * Wait for the parent's veth-setup result: non-zero to proceed, anything
+ * else (zero, EOF, short read) to abort. This must be a real value, not
+ * just a wakeup: on failure the parent also sends SIGKILL, but that can
+ * arrive after we would already have forked (confirmed: a delayed
+ * kill() let an orphaned tracee survive outside our process tree).
+ */
+static int
+_nsntrace_wait_for_veth(struct nsntrace_common *common)
+{
+	char result = 0;
+	ssize_t n;
+
+	/* Close our inherited write-end copy, or the pipe never reaches EOF. */
+	close(common->sync_pipe[1]);
+
+	do {
+		n = read(common->sync_pipe[0], &result, sizeof(result));
+	} while (n < 0 && errno == EINTR);
+
+	close(common->sync_pipe[0]);
+
+	return (n == (ssize_t) sizeof(result) && result != 0) ? 0 : -1;
+}
+
 static int
 netns_main(void *arg) {
 	int status;
 	int ret = EXIT_SUCCESS;
 	struct nsntrace_common *common = (struct nsntrace_common *) arg;
 	struct nsntrace_options *options = common->options;
+
+	if (_nsntrace_wait_for_veth(common) < 0) {
+		/* Parent's setup failed or is gone; nothing to trace. */
+		return EXIT_FAILURE;
+	}
 
 	if (nsntrace_net_ns_init(options->use_public_dns, &common->if_info) < 0) {
 		fprintf(stderr, "failed to setup network environment\n");
@@ -531,6 +575,15 @@ main(int argc, char **argv)
 		goto out;
 	}
 
+	/* O_CLOEXEC: clone() still inherits both ends (only exec clears it),
+	 * but neither the traced program nor the iptables helpers should. */
+	if (pipe2(common.sync_pipe, O_CLOEXEC) < 0) {
+		perror("pipe2");
+		ret = EXIT_FAILURE;
+		goto out;
+	}
+	sync_pipe_write_fd = common.sync_pipe[1];
+
 	/* here we create a new process in a new network namespace */
 	pid = clone(netns_main, child_stack + STACK_SIZE,
 		    CLONE_NEWNET | SIGCHLD, &common);
@@ -540,10 +593,38 @@ main(int argc, char **argv)
 		goto out;
 	}
 
+	/* only the child reads from this */
+	close(common.sync_pipe[0]);
+
+	/* After clone(), so the traced program never inherits this. */
+	signal(SIGPIPE, SIG_IGN);
+
 	_nsntrace_handle_signals(_nsntrace_cleanup);
 
-	if ((ret = nsntrace_net_init(pid, options.device, &common.if_info)) < 0 ||
-	    (ret = nsntrace_capture_check_device(options.device))) {
+	ret = nsntrace_net_init(pid, options.device, &common.if_info);
+	if (ret == 0) {
+		ret = nsntrace_capture_check_device(options.device);
+	}
+
+	/* Tell the child whether to proceed; see _nsntrace_wait_for_veth(). */
+	{
+		char go = (ret == 0) ? 1 : 0;
+		ssize_t n;
+
+		do {
+			n = write(common.sync_pipe[1], &go, sizeof(go));
+		} while (n < 0 && errno == EINTR);
+
+		/* EPIPE means the child is already gone; nothing left to
+		 * tell it, and not worth alarming the user about. */
+		if (n < 0 && errno != EPIPE) {
+			perror("write");
+		}
+		close(common.sync_pipe[1]);
+		sync_pipe_write_fd = -1;
+	}
+
+	if (ret) {
 		fprintf(stderr, "Failed to setup networking environment\n");
 		kill(pid, SIGKILL);
 		goto out;
