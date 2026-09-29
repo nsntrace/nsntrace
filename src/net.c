@@ -126,8 +126,8 @@ _nsntrace_net_set_default_gw(struct rtnl_link *link,
 
 /*
  * A network interface needs to be up in order to function.
- * Here we set it up, and add an address to it. And if specified,
- * we set the default gateway.
+ * Here we set it up, and add an address to it if one is given. And if
+ * specified, we set the default gateway.
  */
 static int
 _nsntrace_net_iface_up(const char *iface,
@@ -137,13 +137,9 @@ _nsntrace_net_iface_up(const char *iface,
 	int ret = 0;
 	struct nl_sock *sock = _nsntrace_net_get_nl_socket();
 	struct nl_cache *cache;
-	struct rtnl_link *link, *change = NULL;
+	struct rtnl_link *link = NULL, *change = NULL;
 	struct rtnl_addr *rtnl_addr = NULL;
 	struct nl_addr *nl_addr;
-
-	if (!ip) {
-		return 0;
-	}
 
 	if ((ret = rtnl_link_alloc_cache(sock, AF_UNSPEC, &cache)) < 0) {
 		return ret;
@@ -153,21 +149,27 @@ _nsntrace_net_iface_up(const char *iface,
 		goto out;
 	}
 
-	rtnl_addr = rtnl_addr_alloc();
-	rtnl_addr_set_link(rtnl_addr, link);
-	rtnl_link_put(link);
+	/*
+	 * Only the addressing is optional. The loopback device is brought up
+	 * with no address of its own (see nsntrace_net_ns_init), and bailing
+	 * out here would leave it down.
+	 */
+	if (ip) {
+		rtnl_addr = rtnl_addr_alloc();
+		rtnl_addr_set_link(rtnl_addr, link);
 
-	if ((ret = nl_addr_parse(ip, AF_INET, &nl_addr)) < 0) {
-		goto out;
-	}
+		if ((ret = nl_addr_parse(ip, AF_INET, &nl_addr)) < 0) {
+			goto out;
+		}
 
-	if ((ret = rtnl_addr_set_local(rtnl_addr, nl_addr)) < 0) {
-		goto out;
-	}
-	nl_addr_put(nl_addr);
+		if ((ret = rtnl_addr_set_local(rtnl_addr, nl_addr)) < 0) {
+			goto out;
+		}
+		nl_addr_put(nl_addr);
 
-	if ((ret = rtnl_addr_add(sock, rtnl_addr, NLM_F_CREATE)) < 0) {
-		goto out;
+		if ((ret = rtnl_addr_add(sock, rtnl_addr, NLM_F_CREATE)) < 0) {
+			goto out;
+		}
 	}
 
 	change = rtnl_link_alloc();
@@ -184,6 +186,7 @@ _nsntrace_net_iface_up(const char *iface,
 	}
 
 out:
+	rtnl_link_put(link);
 	rtnl_addr_put(rtnl_addr);
 	rtnl_link_put(change);
 	nl_cache_free(cache);
